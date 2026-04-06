@@ -109,7 +109,7 @@ async function actually_recalculate() {
             document.getElementById("notes_buffer_outer").style.display = "block"
         }
 
-        show_range(currently_displayed_range)
+        reshow_range()
     }
     finally {
         is_calculating = false
@@ -993,18 +993,20 @@ let currently_displayed_range = null
 
 function show_range(info_index) {
     const range_details = document.getElementById("range_details")
-    if(info_index == null) {
+    if(info_index == null || info_index === currently_displayed_range) {
         range_details.style.display = "none"
         currently_displayed_range = null
         return
     }
 
-    const infos = move_data_infos[info_index]
+    currently_displayed_range = info_index
+    reshow_range()
+}
+
+function reshow_range() {
+    const range_details = document.getElementById("range_details")
+    const infos = move_data_infos[currently_displayed_range]
     if(infos == null) {
-        range_details.style.display = "none"
-        if(currently_displayed_range === info_index) {
-            currently_displayed_range = null
-        }
         return
     }
 
@@ -1020,8 +1022,6 @@ function show_range(info_index) {
     range_details.innerHTML = html
 
     range_details.style.display = "block"
-
-    currently_displayed_range = info_index
 }
 
 window.clear_all_badges = clear_all_badges
