@@ -636,10 +636,36 @@ function refresh_trainer_class_list() {
             trainer_types.push(name)
         }
     }
+
+    const notable_npcs = ["Leader", "Elite Four", "Champion", "Pokémon Trainer", "Rival", "Lake of Rage Gyarados"]
+
+    let inside_notable_npcs = true
+    options += `<optgroup label="Notable NPCs">`
     
-    for(const k of trainer_types.toSorted()) {
+    for(const k of trainer_types.toSorted((a, b) => {
+        let a_index = notable_npcs.indexOf(a)
+        let b_index = notable_npcs.indexOf(b)
+
+        if(a_index >= 0) {
+            if(b_index >= 0) {
+                return a_index - b_index
+            }
+            return -1
+        }
+        if(b_index >= 0) {
+            return 1
+        }
+        return a.localeCompare(b)
+    })) {
+        if(inside_notable_npcs && !notable_npcs.includes(k)) {
+            inside_notable_npcs = false
+            options += "</optgroup>"
+            options += `<optgroup label="Other NPCs">`
+        }
         options += `<option value=\"${k}\">${k}</option>`
     }
+
+    options += "</option>"
 
     document.getElementById("ai_preset_trainer_class").innerHTML = options
     refresh_trainer_list()
