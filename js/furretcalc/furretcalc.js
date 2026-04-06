@@ -547,6 +547,15 @@ function generate_rolls_for_move({
         }
         accuracy_over_256 = Math.min(accuracy_over_256 + difference * 2, 255)
     }
+    else if(move_data.effect === "EFFECT_THUNDER") {
+        switch(weather) {
+            // accuracy is set to 100% (note: this is redundant as it'll bypass accuracy anyway, but the game does this)
+            case Weather.RAIN: accuracy_over_256 = 255; break;
+
+            // accuracy is set to 50%
+            case Weather.SUN: accuracy_over_256 = 128; break;
+        }
+    }
     accuracy_over_256 = calculate_final_accuracy_over_256(accuracy_over_256, attacker.data.stages.accuracy, defender.data.stages.evasion)
 
     const accuracy = accuracy_over_256 / 256
@@ -560,7 +569,7 @@ function generate_rolls_for_move({
             return true
         }
 
-        if(weather === Weather.RAIN && move_type === "THUNDER") {
+        if(weather === Weather.RAIN && move_data.effect === "EFFECT_THUNDER") {
             return true
         }
 
