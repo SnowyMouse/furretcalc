@@ -162,8 +162,8 @@ async function get_parties(url, pokemon) {
                         current_moveset.push(NO_MOVE)
                     }
 
-                    while(current_moveset.length > 4) {
-                        current_moveset.splice(0)
+                    if(current_moveset.length > 4) {
+                        current_moveset.splice(0, current_moveset.length - 4)
                     }
 
                     if(current_moveset[0] === NO_MOVE) {

@@ -1,6 +1,7 @@
 "use strict"
 
 import * as furretcalc from "./furretcalc/furretcalc.js"
+import {get_crystal_pokemon, get_gold_pokemon} from "./furretcalc/furretcalc.js";
 
 furretcalc.load_furretcalc("./js/furretcalc")
     .then(() => set_up_widgets())
@@ -637,7 +638,7 @@ function refresh_trainer_class_list() {
         }
     }
 
-    const notable_npcs = ["Leader", "Elite Four", "Champion", "Pokémon Trainer", "Rival", "Lake of Rage Gyarados"]
+    const notable_npcs = ["Rival", "Leader", "Elite Four", "Champion", "Pokémon Trainer", "Lake of Rage Gyarados"]
 
     let inside_notable_npcs = true
     options += `<optgroup label="Notable NPCs">`
@@ -671,8 +672,22 @@ function refresh_trainer_class_list() {
     refresh_trainer_list()
 }
 
+const RIVAL_LOCATIONS = Object.freeze({
+    [1]: "Cherrygrove City",
+    [2]: "Azalea Town",
+    [3]: "Burned Tower",
+    [4]: "Underground",
+    [5]: "Victory Road",
+    [6]: "Mt. Moon",
+    [7]: "Indigo Plateau"
+})
+const CHIKORITA_LINE = Object.freeze(["CHIKORITA", "BAYLEEF", "MEGANIUM"])
+const CYNDAQUIL_LINE = Object.freeze(["CYNDAQUIL", "QUILAVA", "TYPHLOSION"])
+const TOTODILE_LINE = Object.freeze(["TOTODILE", "CROCONAW", "FERALIGATR"])
+
 function refresh_trainer_list() {
     const search = document.getElementById("ai_preset_trainer_class").value
+    const pokemon = get_crystal_pokemon()
     
     let options = ""
 
@@ -757,8 +772,39 @@ function refresh_trainer_list() {
     for(const k of sortedKeys) {
         const v = all[k]
         if(v.length > 1) {
-            for(const [number,entry] of Object.entries(v)) {
-                options += `<option value=${entry}>${k} #${parseInt(number)+1}</option>`
+            if(search === "Rival") {
+                let chikorita_count = 0;
+
+                let split_rival = () => {
+                    chikorita_count++
+                    if(chikorita_count !== 1) {
+                        options += "</optgroup>"
+                    }
+                    options += `<optgroup label="Rival #${chikorita_count} @ ${RIVAL_LOCATIONS[chikorita_count] ?? "Mystery Zone"}">`
+                }
+
+                for(const entry of Object.values(v)) {
+                    const [group, index] = entry.split("-")
+                    const { party } = t[group].trainers[parseInt(index)]
+                    let trainer_type = "Unknown"
+
+                    const starter = party.find(({species}) => CHIKORITA_LINE.includes(species) || TOTODILE_LINE.includes(species) || CYNDAQUIL_LINE.includes(species))
+
+                    if(starter != null) {
+                        if(CHIKORITA_LINE.includes(starter.species)) {
+                            split_rival()
+                        }
+                        trainer_type = pokemon[starter.species].name
+                    }
+
+                    options += `<option value=${entry}>${k} #${chikorita_count} (${trainer_type})</option>`
+                }
+                options += "</optgroup>"
+            }
+            else {
+                for(const [number,entry] of Object.entries(v)) {
+                    options += `<option value=${entry}>${k} #${parseInt(number)+1}</option>`
+                }
             }
         }
         else {

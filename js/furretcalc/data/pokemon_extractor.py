@@ -142,7 +142,7 @@ for pk in pokemon:
             break
         s = [i.strip() for i in db.split(",")]
         if not in_evos:
-            p["level_up_moves"].append({ "level": s[0], "move": s[1] })
+            p["level_up_moves"].append({ "level": int(s[0]), "move": s[1] })
 
     if not found_it:
         print("Failed to locate moves for {}".format(pk))
