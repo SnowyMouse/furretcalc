@@ -307,6 +307,7 @@ header p {
 
 #notes_buffer_outer {
     flex: 1;
+    display: none;
 }
 
 .damage_outer {
@@ -389,15 +390,23 @@ header p {
 .stats_move .stats_move_data .range_percentage, .stats_move .stats_move_data .range_turns {
     font-family: "Hack", monospace;
     font-size: 11px;
+    text-overflow: clip;
+}
+
+.range_clickable {
+    text-decoration: none;
+}
+
+.range_nonclickable {
+    cursor: crosshair;
 }
 
 .stats_move .stats_move_data .range_percentage {
     text-align: right;
-    float: right;
 }
 
 .stats_move .stats_move_data .range_turns {
-    float: left;
+    flex: 1;
 }
 
 .stats_move .stats_move_data .range {
@@ -417,4 +426,38 @@ header p {
 
 .stats_move.error_move {
     background-color: #662222
+}
+
+#range_details {
+    display: none;
+    position: relative;
+}
+
+#range_details table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    text-align: center;
+    width: 100%;
+    margin-top: 4px;
+}
+
+#range_details th {
+    border-bottom: 1px solid #FFEEDD
+}
+#range_details tr:nth-child(even) td {
+    background-color: rgba(255,255,255,0.075);
+}
+#range_details td {
+    font-family: "Hack", monospace;
+    font-size: 12px;
+}
+
+#range_header {
+    text-align: right;
+    right: 8px;
+    font-size: 12px;
+    position: absolute;
+}
+.range_row {
+    display: flex;
 }

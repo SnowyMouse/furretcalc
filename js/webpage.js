@@ -32,6 +32,11 @@ async function actually_recalculate() {
         is_calculating = true
         await furretcalc.wait_loaded()
 
+        document.getElementById("range_details").style.display = "none"
+        document.getElementById("notes_buffer_outer").style.display = "none"
+
+        move_data_infos = {}
+
         const player_stats = recalculate_stats(true)
         const opponent_stats = recalculate_stats(false)
 
@@ -99,6 +104,12 @@ async function actually_recalculate() {
         }
 
         notes.innerHTML = html
+
+        if(html !== "") {
+            document.getElementById("notes_buffer_outer").style.display = "block"
+        }
+
+        show_range(currently_displayed_range)
     }
     finally {
         is_calculating = false
@@ -107,6 +118,8 @@ async function actually_recalculate() {
 
 const QUASI_TYPELESS_NOTE = "This move does not receive STAB, type-based badge boosts, weather boosts (or nerfs), or type effectiveness (it does not interact with your opponent's types).\n\nHowever, its typing is still used for determining damage category and item boosts."
 const DISPLAYED_TURN_COUNT = 4
+
+let move_data_infos = {}
 
 function format_move_data(base_div, stats, stats_opposite, moves, is_player, suggestions) {
     const all_moves = furretcalc.get_moves()
@@ -159,6 +172,9 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
     const best_ttk_rating = moves.toSorted((a, b) => -cmp_ttk(a, b))[0]
 
     for(const [index, data] of Object.entries(moves)) {
+        const info_index = `${is_player ? "PLAYER" : "OPPONENT"}_${index}`
+        move_data_infos[info_index] = null
+
         const move_name = stats.data.moves[index]
         if(move_name === "NO_MOVE") {
             continue
@@ -166,6 +182,10 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         const move_data = all_moves[move_name]
         if(move_data == null) {
             continue
+        }
+
+        move_data_infos[info_index] = {
+            data, move_name, move_data, is_player
         }
 
         const index_int = parseInt(index)
@@ -184,7 +204,7 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         const div_data = document.querySelector(`${div_selector} .stats_move_data`)
 
         if(typeof data === "string") {
-            div_data.innerHTML = `<span class="range">${data}</span>`
+            div_data.innerHTML = `<span class="range range_nonclickable" title="This is broken. Please fix your input.">${data}</span>`
             document.querySelector(div_selector).classList.add("error_move")
             continue
         }
@@ -211,12 +231,11 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
 
         const fixedAmount = max_percent >= 10.0 ? 0 : 1
 
-        if(base_low === base) {
-            data_text += `<span class="range">${(min_percent * 100.0).toFixed(fixedAmount)}% (${displayed_min})</span>`
-        }
-        else {
-            data_text += `<span class="range">${(min_percent * 100.0).toFixed(fixedAmount)}% - ${(max_percent * 100.0).toFixed(fixedAmount)}% (${displayed_min} - ${displayed_max})</span>`
-        }
+        let displayed_range = base_low === base ?
+            `${(min_percent * 100.0).toFixed(fixedAmount)}% (${displayed_min})`
+            : `${(min_percent * 100.0).toFixed(fixedAmount)}% - ${(max_percent * 100.0).toFixed(fixedAmount)}% (${displayed_min} - ${displayed_max})`
+
+        data_text += `<a href="#" class="range range_clickable" onclick="show_range('${info_index}')">${displayed_range}</a>`
 
         if(turn_chances.some((chance) => chance > 0.0)) {
             let chances = Object.entries(turn_chances)
@@ -234,6 +253,7 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
                 const ti = parseInt(t)
                 const prefix = `${ti + 1} ${turn_name}${ti === 0 ? "" : "s"}`
 
+                data_text += `<div class="range_row">`
                 data_text += `<div class="range_turns">${prefix}</div>`
 
                 data_text += `<div class="range_percentage">`
@@ -249,15 +269,21 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
                 else {
                     data_text += (chance * 100.0).toFixed(1)
                 }
-                data_text += `%</div><br />`
+                data_text += `%</div></div>`
             }
         }
         else {
-            data_text += `<div class=\"range_turns\">Out of range!</div><br /><br />`
+            data_text += `<div class="range_row">`
+            data_text += `<div class=\"range_turns\">Out of range!</div>`
+            data_text += `</div><br />`
+            data_text += `<div class="range_row">`
             data_text += `<div class=\"range_turns\">Min ${turn_name}s</div>`
-            data_text += `<div class=\"range_percentage\">${Math.max(stats_opposite.data.stats.hp / maximum, 1).toFixed(1)}</div><br />`
+            data_text += `<div class=\"range_percentage\">${Math.max(stats_opposite.data.stats.hp / maximum, 1).toFixed(1)}</div>`
+            data_text += `</div>`
+            data_text += `<div class="range_row">`
             data_text += `<div class=\"range_turns\">Avg ${turn_name}s</div>`
-            data_text += `<div class=\"range_percentage\">${Math.max(stats_opposite.data.stats.hp / average, 1).toFixed(1)}</div><br />`
+            data_text += `<div class=\"range_percentage\">${Math.max(stats_opposite.data.stats.hp / average, 1).toFixed(1)}</div>`
+            data_text += `</div>`
         }
 
         div_data.innerHTML = data_text
@@ -963,9 +989,45 @@ function parse_float_clamped(value, min, max) {
     return float_value
 }
 
+let currently_displayed_range = null
+
+function show_range(info_index) {
+    const range_details = document.getElementById("range_details")
+    if(info_index == null) {
+        range_details.style.display = "none"
+        currently_displayed_range = null
+        return
+    }
+
+    const infos = move_data_infos[info_index]
+    if(infos == null) {
+        range_details.style.display = "none"
+        if(currently_displayed_range === info_index) {
+            currently_displayed_range = null
+        }
+        return
+    }
+
+    let html = `<div id='range_header'><a href='#' onclick='show_range(null)'>(Close)</a></div>`
+
+    html += `<h2>Ranges For ${infos.is_player ? "" : "Opponent's"} ${infos.move_data.name}</h2>`
+    html += "<table><tr><th>Damage</th><th>Probability</th></tr>"
+    for(const [damage, probability] of infos.data.rolls) {
+        html += `<tr><td>${damage}</td><td>${(probability * 100).toFixed(1)}%</td>`
+    }
+    html += "</table>"
+
+    range_details.innerHTML = html
+
+    range_details.style.display = "block"
+
+    currently_displayed_range = info_index
+}
+
 window.clear_all_badges = clear_all_badges
 window.select_all_badges = select_all_badges
 window.select_johto_badges = select_johto_badges
+window.show_range = show_range
 window.show_instructions = () => {
     document.getElementById("instructions").style.display = "block"
     document.getElementById("instructions_show").style.display = "none"
