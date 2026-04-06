@@ -107,9 +107,7 @@ async function actually_recalculate() {
 const QUASI_TYPELESS_NOTE = "This move does not receive STAB, type-based badge boosts, weather boosts (or nerfs), or type effectiveness (it does not interact with your opponent's types).\n\nHowever, its typing is still used for determining damage category and item boosts."
 const DISPLAYED_TURN_COUNT = 4
 
-function format_move_data(base_div, stats, stats_opposite, moves, is_player, suggestions, per_hit) {
-    const turn_name = per_hit ? "hit" : "turn"
-
+function format_move_data(base_div, stats, stats_opposite, moves, is_player, suggestions) {
     const all_moves = furretcalc.get_moves()
 
     // Returns <0 if b > a; >0 if a > b; 0 if a == b
@@ -193,7 +191,9 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         if(data == null) {
             continue
         }
-        const {base_low, base, minimum, maximum, turn_chances, average} = data
+        const {base_low, base, minimum, maximum, turn_chances, average, per_hit} = data
+
+        const turn_name = per_hit ? "hit" : "turn"
 
         let data_text = "";
 
@@ -288,9 +288,6 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         switch(move_data.effect) {
             case "EFFECT_FUTURE_SIGHT":
                 suggestions["future_sight_note"] = `Future Sight is <u title="${QUASI_TYPELESS_NOTE}">Quasi-Typeless</u>.`
-                if(!per_hit) {
-                    suggestions["future_sight_ttk_note"] = `Future Sight's delay until damage is dealt is not yet implemented.`
-                }
                 break
             case "EFFECT_BEAT_UP":
                 suggestions["beat_up_note"] = `Beat Up is <u title="${QUASI_TYPELESS_NOTE}">Quasi-Typeless</u>.`
@@ -302,17 +299,8 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
             case "EFFECT_FURY_CUTTER":
                 suggestions["fury_cutter_wip"] = `Fury Cutter is not yet implemented. Damage displayed is only for the first hit.`
                 break
-            case "EFFECT_SOLARBEAM":
-            case "EFFECT_FLY":
-            case "EFFECT_DIG":
-                if(!per_hit) {
-                    suggestions["charge_wip"] = `Moves with charging periods are not yet implemented. Damage displayed is per hit.`
-                }
-                break
             case "EFFECT_HYPER_BEAM":
-                if(!per_hit) {
-                    suggestions["hyper_beam_wip"] = `Hyper Beam's recharge period is not factored in. Damage displayed is per hit.`
-                }
+                suggestions["hyper_beam_wip"] = `Hyper Beam's recharge period is not factored in. Damage displayed is per hit.`
                 break
         }
     }

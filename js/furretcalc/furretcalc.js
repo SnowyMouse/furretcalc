@@ -379,7 +379,8 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
     }
 
     const return_value = {
-        "turn_chances": []
+        "turn_chances": [],
+        per_hit
     }
 
     generate_rolls_for_move({
@@ -399,7 +400,47 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
         max_rolls
     )
 
+    if(!per_hit) {
+        adjust_turn_chances_for_move({move_data, return_value, weather})
+    }
+
     return return_value
+}
+
+function adjust_turn_chances_for_move({move_data, weather, return_value}) {
+    const turns_calculated = return_value.turn_chances.length
+    if(turns_calculated === 0) {
+        return
+    }
+
+    switch(move_data.effect) {
+        case "EFFECT_SOLARBEAM":
+            if(weather === Weather.SUN) {
+                return
+            }
+        // fallthrough
+        case "EFFECT_RAZOR_WIND":
+        case "EFFECT_FLY":
+        case "EFFECT_DIG":
+        case "EFFECT_SKY_ATTACK": {
+            for(let i = turns_calculated - 1; i >= 0; i--) {
+                return_value.turn_chances.splice(i, 0, 0)
+            }
+            break
+        }
+
+        case "EFFECT_FUTURE_SIGHT":
+            for(let i = turns_calculated - 1; i >= 0; i--) {
+                return_value.turn_chances.splice(i, 0, 0, 0)
+            }
+            break
+
+        case "EFFECT_HYPER_BEAM": {
+            return_value.per_hit = true
+            break
+        }
+    }
+
 }
 
 function generate_rolls_for_move({
