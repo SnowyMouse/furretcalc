@@ -382,147 +382,121 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
         "turn_chances": []
     }
 
+    generate_rolls_for_move({
+        move_type, move_data, noncrit_damage, crit_damage, attacker, defender, return_value, per_hit, warnings, weather
+    })
+
+    if(return_value.error) {
+        return return_value.error
+    }
+
+    calculate_damage_rolls_against_hp(
+        defender.data.stats.hp,
+        return_value.rolls,
+        return_value,
+        cutoff,
+        max_turns,
+        max_rolls
+    )
+
+    return return_value
+}
+
+function generate_rolls_for_move({
+    move_type,
+    move_data,
+    noncrit_damage,
+    crit_damage,
+    attacker,
+    defender,
+    return_value,
+    per_hit,
+    warnings,
+    weather
+}) {
     let crit_chance = 17 / 256
+
     if(move_data.effect === "EFFECT_FUTURE_SIGHT") {
         crit_chance = 0
     }
 
-    // calculate all rolls upfront
-    let rolls = []
     const level = attacker.data.level
-
-    if(move_data.effect === "EFFECT_REVERSAL") {
-        rolls.push([noncrit_damage, 1.0])
-        return_value.base_low = noncrit_damage
-        return_value.base = noncrit_damage
-        return_value.maximum = noncrit_damage
-    }
-    else if(move_data.effect === "EFFECT_STATIC_DAMAGE") {
-        rolls.push([move_data.base_power, 1.0])
-        return_value.base = move_data.base_power
-        return_value.base_low = move_data.base_power
-    }
-    else if(move_data.effect === "EFFECT_LEVEL_DAMAGE") {
-        rolls.push([level, 1.0])
-        return_value.base = level
-        return_value.base_low = level
-    }
-    else if(move_data.effect === "EFFECT_OHKO") {
-        rolls.push([65535, 1.0])
-        return_value.base = 65535
-        return_value.base_low = 65535
-    }
-    else if(move_data.effect === "EFFECT_PSYWAVE") {
-        const max_damage = (level + int_divide(level, 2)) & 255
-        if(max_damage === 0) {
-            (warnings ?? {})["psywave_warning"] = "Psywave will softlock the game if your level is 0 or 171."
-            return "Game crash :("
+    switch(move_data.effect) {
+        case "EFFECT_REVERSAL": {
+            return_value.base_low = noncrit_damage
+            return_value.base = noncrit_damage
+            return_value.rolls = [[noncrit_damage, 1.0]]
+            break
         }
-
-        for(let i = 1; i <= max_damage; i++) {
-            rolls.push([i, 1 / max_damage])
+        case "EFFECT_STATIC_DAMAGE": {
+            return_value.base = move_data.base_power
+            return_value.base_low = move_data.base_power
+            return_value.rolls = [[move_data.base_power, 1.0]]
+            break
         }
-
-        return_value.base = max_damage
-        return_value.base_low = 1
-    }
-    else {
-        const noncrit_chance = 1.0 - crit_chance
-        return_value.base = noncrit_damage
-
-        const roll_count = (MAX_ROLL - MIN_ROLL + 1)
-        for(let i = MIN_ROLL; i <= MAX_ROLL; i++) {
-            let noncrit_damage_roll = int_divide(noncrit_damage * i, MAX_ROLL)
-            let crit_damage_roll = int_divide(crit_damage * i, MAX_ROLL)
-
-            rolls.push([noncrit_damage_roll, noncrit_chance / roll_count])
-            rolls.push([crit_damage_roll, crit_chance / roll_count])
+        case "EFFECT_LEVEL_DAMAGE": {
+            return_value.base = level
+            return_value.base_low = level
+            return_value.rolls = [[move_data.base_power, 1.0]]
+            break
         }
-
-        return_value.base_low = rolls.map((r) => r[0]).reduce((a, b) => {
-            return a < b ? a : b
-        })
-
-        if(!per_hit) {
-            const cache = {
-                completed: {}
+        case "EFFECT_OHKO": {
+            return_value.base = 65535
+            return_value.base_low = 65535
+            return_value.rolls = [[65535, 1.0]]
+            break
+        }
+        case "EFFECT_PSYWAVE": {
+            const max_damage = (level + int_divide(level, 2)) & 255
+            if(max_damage === 0) {
+                (warnings ?? {})["psywave_warning"] = "Psywave will softlock the game if your level is 0 or 171."
+                return_value.rolls = null
+                return_value.error = "Game crash! (bad level)"
+                return
             }
 
-            function double_up(new_rolls, total_odds, total_damage, n) {
-                if(n < 1) {
-                    throw new Error("bad state (double_up n < 1)")
-                }
-
-                const cached = cache[n]
-                if(cached != null) {
-                    // re-use results from last roll (avoids having to do the same calculation billions of times)
-                    for(const [hit_dmg, hit_odds] of Object.entries(cached)) {
-                        const odds = hit_odds * total_odds
-                        const dmg = parseInt(hit_dmg) + total_damage
-                        new_rolls[dmg] = (new_rolls[dmg] ?? 0) + odds
-                    }
-                }
-                else {
-                    for(const [hit_dmg, hit_odds] of rolls) {
-                        const odds = hit_odds * total_odds
-                        const dmg = hit_dmg + total_damage
-
-                        if(n === 1) {
-                            new_rolls[dmg] = (new_rolls[dmg] ?? 0) + odds
-                        }
-                        else {
-                            double_up(new_rolls, odds, dmg, n - 1)
-                        }
-                    }
-                }
+            let rolls = []
+            for(let i = 1; i <= max_damage; i++) {
+                rolls.push([i, 1 / max_damage])
             }
 
-            switch(move_data.effect) {
-                case "EFFECT_TWINEEDLE":
-                case "EFFECT_DOUBLE_HIT": {
-                    const new_rolls = {}
-                    double_up(new_rolls, 1, 0, 2)
-
-                    rolls = []
-                    for(const [k,v] of Object.entries(new_rolls)) {
-                        rolls.push([parseInt(k), v])
-                    }
-
-                    break
-                }
-                case "EFFECT_MULTI_HIT": {
-                    // 3/8 chance to hit ONLY 2x
-                    // 3/8 chance to hit ONLY 3x
-                    // 1/8 chance to hit ONLY 4x
-                    // 1/8 chance to hit ONLY 5x
-
-                    const hit_odds = [[3/8, 2], [3/8, 3], [1/8, 4], [1/8, 5]]
-
-                    const new_rolls = {}
-                    for(const [odds, hits] of hit_odds) {
-                        const new_rolls_this = {}
-
-                        double_up(new_rolls_this, 1, 0, hits)
-                        cache[hits] = Object.freeze(new_rolls_this)
-
-                        for(const [k, v] of Object.entries(cache[hits])) {
-                            new_rolls[k] = (new_rolls[k] ?? 0) + v * odds
-                        }
-                    }
-
-                    rolls = []
-                    for(const [k,v] of Object.entries(new_rolls)) {
-                        rolls.push([parseInt(k), v])
-                    }
-
-                    break
-                }
-            }
+            return_value.base = max_damage
+            return_value.base_low = 1
+            return_value.rolls = rolls
+            break
         }
+        default: {
+            const noncrit_chance = 1.0 - crit_chance
+            return_value.base = noncrit_damage
+
+            const roll_count = (MAX_ROLL - MIN_ROLL + 1)
+            let rolls = []
+            for (let i = MIN_ROLL; i <= MAX_ROLL; i++) {
+                let noncrit_damage_roll = int_divide(noncrit_damage * i, MAX_ROLL)
+                if(i === MIN_ROLL) {
+                    return_value.base_low = noncrit_damage_roll
+                }
+
+                let crit_damage_roll = int_divide(crit_damage * i, MAX_ROLL)
+                rolls.push([noncrit_damage_roll, noncrit_chance / roll_count])
+                rolls.push([crit_damage_roll, crit_chance / roll_count])
+            }
+
+            if (!per_hit) {
+                rolls = calculate_per_turn_rolls(move_data, rolls)
+            }
+
+            return_value.rolls = rolls
+        }
+        break
     }
+
+    const rolls_damages = return_value.rolls.map((r) => r[0])
+    return_value.minimum = rolls_damages.reduce((a, b) => a < b ? a : b)
+    return_value.maximum = rolls_damages.reduce((a, b) => a > b ? a : b)
+    return_value.average = (rolls_damages.reduce((a, b) => a + b) ?? 0) / rolls_damages.length
 
     let accuracy_over_256 = move_data.accuracy_out_of_256
-
     if(move_data.effect === "EFFECT_OHKO") {
         const attacker_level = attacker.data.level
         const defender_level = defender.data.level
@@ -532,6 +506,7 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
         }
         accuracy_over_256 = Math.min(accuracy_over_256 + difference * 2, 255)
     }
+    accuracy_over_256 = calculate_final_accuracy_over_256(accuracy_over_256, attacker.data.stages.accuracy, defender.data.stages.evasion)
 
     const accuracy = accuracy_over_256 / 256
 
@@ -553,50 +528,118 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
 
     // Apply accuracy
     if(!bypasses_accuracy) {
-        for(const c in rolls) {
-            rolls[c][1] *= accuracy
+        for(const c in return_value.rolls) {
+            return_value.rolls[c][1] *= accuracy
         }
     }
 
-    // For displaying stuff
-    const best_damage = rolls.map((r) => r[0]).reduce((a, b) => {
-        return a > b ? a : b
-    })
+    // Combine rolls
+    return_value.rolls = combine_rolls(return_value.rolls, defender)
+}
 
-    return_value.maximum = best_damage
-    return_value.minimum = rolls.map((r) => r[0]).reduce((a, b) => {
-        if (a === 0.0) {
-            return b
-        }
-        if (b === 0.0) {
-            return a
-        }
-        return a < b ? a : b
-    })
+function calculate_final_accuracy_over_256(base_accuracy, attacker_accuracy_stage, defender_evasion_stage) {
+    let accuracy = base_accuracy
 
-    return_value.average = rolls.map((a) => a[0] * a[1]).reduce((a,b) => a + b)
+    const [num_acc, den_acc] = MODIFIER_FOR_ACCURACY[attacker_accuracy_stage]
+    const [num_eva, den_ev] = MODIFIER_FOR_ACCURACY[-defender_evasion_stage]
 
-    // Combine rolls again
-    rolls = combine_rolls(rolls, defender)
+    accuracy = Math.min(Math.max(int_divide(accuracy * num_acc, den_acc), 0), 65535)
+    accuracy = Math.min(Math.max(int_divide(accuracy * num_eva, den_ev), 0), 255)
 
-    // we want the greater of rolls.length or 2 because log(1) = 0 and we don't want to divide by 0
-    // const total_turns = Math.log2(max_rolls) / Math.log2(Math.max(rolls.length, 2))
-    const remaining_hp = defender.data.stats.hp
+    return accuracy
+}
 
-    if(best_damage < 1) {
-        return return_value
+const MODIFIER_FOR_ACCURACY = {
+    [-6]: [33, 100],
+    [-5]: [36, 100],
+    [-4]: [43, 100],
+    [-3]: [50, 100],
+    [-2]: [60, 100],
+    [-1]: [75, 100],
+    [0]: [1, 1],
+    [1]: [133, 100],
+    [2]: [166, 100],
+    [3]: [2, 1],
+    [4]: [233, 100],
+    [5]: [133, 50],
+    [6]: [3, 1]
+}
+
+function calculate_per_turn_rolls(move_data, rolls) {
+    const cache = {
+        completed: {}
     }
 
-    calculate_damage_rolls_against_hp(
-        remaining_hp,
-        rolls,
-        return_value,
-        cutoff,
-        max_turns,
-        max_rolls
-    )
+    function double_up(new_rolls, total_odds, total_damage, n) {
+        if (n < 1) {
+            throw new Error("bad state (double_up n < 1)")
+        }
 
-    return return_value
+        const cached = cache[n]
+        if (cached != null) {
+            // re-use results from last roll (avoids having to do the same calculation billions of times)
+            for (const [hit_dmg, hit_odds] of Object.entries(cached)) {
+                const odds = hit_odds * total_odds
+                const dmg = parseInt(hit_dmg) + total_damage
+                new_rolls[dmg] = (new_rolls[dmg] ?? 0) + odds
+            }
+        } else {
+            for (const [hit_dmg, hit_odds] of rolls) {
+                const odds = hit_odds * total_odds
+                const dmg = hit_dmg + total_damage
+
+                if (n === 1) {
+                    new_rolls[dmg] = (new_rolls[dmg] ?? 0) + odds
+                } else {
+                    double_up(new_rolls, odds, dmg, n - 1)
+                }
+            }
+        }
+    }
+
+    switch (move_data.effect) {
+        case "EFFECT_TWINEEDLE":
+        case "EFFECT_DOUBLE_HIT": {
+            const new_rolls = {}
+            double_up(new_rolls, 1, 0, 2)
+
+            rolls = []
+            for (const [k, v] of Object.entries(new_rolls)) {
+                rolls.push([parseInt(k), v])
+            }
+
+            break
+        }
+        case "EFFECT_MULTI_HIT": {
+            // 3/8 chance to hit ONLY 2x
+            // 3/8 chance to hit ONLY 3x
+            // 1/8 chance to hit ONLY 4x
+            // 1/8 chance to hit ONLY 5x
+
+            const hit_odds = [[3 / 8, 2], [3 / 8, 3], [1 / 8, 4], [1 / 8, 5]]
+
+            const new_rolls = {}
+            for (const [odds, hits] of hit_odds) {
+                const new_rolls_this = {}
+
+                double_up(new_rolls_this, 1, 0, hits)
+                cache[hits] = Object.freeze(new_rolls_this)
+
+                for (const [k, v] of Object.entries(cache[hits])) {
+                    new_rolls[k] = (new_rolls[k] ?? 0) + v * odds
+                }
+            }
+
+            rolls = []
+            for (const [k, v] of Object.entries(new_rolls)) {
+                rolls.push([parseInt(k), v])
+            }
+
+            break
+        }
+    }
+
+    return rolls
 }
 
 // For some reason, these aren't defined as high-crit moves via move effect by the game

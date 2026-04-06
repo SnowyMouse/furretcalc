@@ -34,11 +34,11 @@ async function actually_recalculate() {
         const player_stats = recalculate_stats(true)
         const opponent_stats = recalculate_stats(false)
 
-        let max_rolls = parseInt(document.getElementById("settings_max_damage_rolls").value)
+        let max_rolls = parse_int_clamped(document.getElementById("settings_max_damage_rolls").value, 0, Number.MAX_SAFE_INTEGER)
         if(!isFinite(max_rolls) || max_rolls < 1) { max_rolls = 100 }
-        let max_turns = parseInt(document.getElementById("settings_max_turns").value)
+        let max_turns = parse_int_clamped(document.getElementById("settings_max_turns").value, 0, Number.MAX_SAFE_INTEGER)
         if(!isFinite(max_turns) || max_turns < 1) { max_turns = 100 }
-        let target_ko_chance = parseFloat(document.getElementById("settings_ko_chance").value)
+        let target_ko_chance = parse_float_clamped(document.getElementById("settings_ko_chance").value, 0, 100)
         if(!isFinite(target_ko_chance) || target_ko_chance < 0.0) { max_turns = 0.0 }
         if(target_ko_chance > 100.0) { target_ko_chance = 100.0 }
 
@@ -71,6 +71,10 @@ async function actually_recalculate() {
 
         for(const data of [...document.getElementsByClassName("best_move")]) {
             data.classList.remove("best_move")
+        }
+
+        for(const data of [...document.getElementsByClassName("error_move")]) {
+            data.classList.remove("error_move")
         }
 
         for(const data of document.getElementsByClassName("stats_move_data")) {
@@ -165,6 +169,7 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
             continue
         }
 
+        const index_int = parseInt(index)
         let move_display_name = move_data.name
         if(move_data.effect === "EFFECT_HIDDEN_POWER") {
             const { base_power, type } = furretcalc.get_hidden_power_stats(stats.data.dvs)
@@ -174,9 +179,9 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
             move_display_name = `${move_display_name} ${type}`
         }
 
-        document.querySelector(`${base_div} .stats_move_${parseInt(index) + 1} .stats_move_name`).innerHTML = move_display_name
+        document.querySelector(`${base_div} .stats_move_${index_int + 1} .stats_move_name`).innerHTML = move_display_name
 
-        const div_selector = `${base_div} .stats_move_${parseInt(index) + 1}`
+        const div_selector = `${base_div} .stats_move_${index_int + 1}`
         const div_data = document.querySelector(`${div_selector} .stats_move_data`)
 
         if(typeof data === "string") {
@@ -188,20 +193,28 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         if(data == null) {
             continue
         }
-        const {base_low, base, maximum, turn_chances, average} = data
+        const {base_low, base, minimum, maximum, turn_chances, average} = data
 
         let data_text = "";
 
-        const min_percent = base_low / stats_opposite.stats.hp
-        const base_percent = base / stats_opposite.stats.hp
+        let displayed_min = base_low
+        let displayed_max = base
 
-        const fixedAmount = base_percent >= 10.0 ? 0 : 1
+        if(document.getElementById("settings_range_display").value === "full_range") {
+            displayed_min = minimum
+            displayed_max = maximum
+        }
+
+        const min_percent = displayed_min / stats_opposite.stats.hp
+        const max_percent = displayed_max / stats_opposite.stats.hp
+
+        const fixedAmount = max_percent >= 10.0 ? 0 : 1
 
         if(base_low === base) {
-            data_text += `<span class="range">${(min_percent * 100.0).toFixed(fixedAmount)}% (${base_low})</span>`
+            data_text += `<span class="range">${(min_percent * 100.0).toFixed(fixedAmount)}% (${displayed_min})</span>`
         }
         else {
-            data_text += `<span class="range">${(min_percent * 100.0).toFixed(fixedAmount)}% - ${(base_percent * 100.0).toFixed(fixedAmount)}% (${base_low} - ${base})</span>`
+            data_text += `<span class="range">${(min_percent * 100.0).toFixed(fixedAmount)}% - ${(max_percent * 100.0).toFixed(fixedAmount)}% (${displayed_min} - ${displayed_max})</span>`
         }
 
         if(turn_chances.some((chance) => chance > 0.0)) {
@@ -217,7 +230,8 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
             }
 
             for(const [t, chance] of chances) {
-                const prefix = `${parseInt(t) + 1} ${turn_name}${t === "0" ? "" : "s"}`
+                const ti = parseInt(t)
+                const prefix = `${ti + 1} ${turn_name}${ti === 0 ? "" : "s"}`
 
                 data_text += `<div class="range_turns">${prefix}</div>`
 
@@ -240,9 +254,9 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         else {
             data_text += `<div class=\"range_turns\">Out of range!</div><br /><br />`
             data_text += `<div class=\"range_turns\">Min ${turn_name}s</div>`
-            data_text += `<div class=\"range_percentage\">${(stats_opposite.data.stats.hp / maximum).toFixed(1)}</div><br />`
+            data_text += `<div class=\"range_percentage\">${Math.max(stats_opposite.data.stats.hp / maximum, 1).toFixed(1)}</div><br />`
             data_text += `<div class=\"range_turns\">Avg ${turn_name}s</div>`
-            data_text += `<div class=\"range_percentage\">${(stats_opposite.data.stats.hp / average).toFixed(1)}</div><br />`
+            data_text += `<div class=\"range_percentage\">${Math.max(stats_opposite.data.stats.hp / average, 1).toFixed(1)}</div><br />`
         }
 
         div_data.innerHTML = data_text
@@ -335,24 +349,6 @@ function recalculate_stats(is_player) {
     }
 }
 
-function cleanup_number_value(value, min, max) {
-    const int_value = parseInt(value)
-
-    if(!isFinite(int_value)) {
-        return min ?? 0
-    }
-
-    if(min != null && int_value < min) {
-        return min
-    }
-
-    if(max != null && int_value > max) {
-        return max
-    }
-
-    return int_value
-}
-
 function get_badges(is_player) {
     if(!is_player || document.getElementById("battle_type").value !== "ai") {
         return null
@@ -382,23 +378,25 @@ function get_stats(is_player) {
     for(const stat of document.querySelectorAll(`${get_stats_box(is_player)} input, ${get_stats_box(is_player)} select`)) {
         for(const c of stat.classList) {
             switch(c) {
-                case "hp_stat": stats.stats["hp"] = cleanup_number_value(stat.value, 1, 999); break;
-                case "atk_stat": stats.stats["attack"] = cleanup_number_value(stat.value, 1, 999); break;
-                case "def_stat": stats.stats["defense"] = cleanup_number_value(stat.value, 1, 999); break;
-                case "spa_stat": stats.stats["special_attack"] = cleanup_number_value(stat.value, 1, 999); break;
-                case "spd_stat": stats.stats["special_defense"] = cleanup_number_value(stat.value, 1, 999); break;
-                case "spe_stat": stats.stats["speed"] = cleanup_number_value(stat.value, 1, 999); break;
+                case "hp_stat": stats.stats["hp"] = parse_int_clamped(stat.value, 1, 999); break;
+                case "atk_stat": stats.stats["attack"] = parse_int_clamped(stat.value, 1, 999); break;
+                case "def_stat": stats.stats["defense"] = parse_int_clamped(stat.value, 1, 999); break;
+                case "spa_stat": stats.stats["special_attack"] = parse_int_clamped(stat.value, 1, 999); break;
+                case "spd_stat": stats.stats["special_defense"] = parse_int_clamped(stat.value, 1, 999); break;
+                case "spe_stat": stats.stats["speed"] = parse_int_clamped(stat.value, 1, 999); break;
                 
-                case "atk_dv": stats.dvs["attack"] = cleanup_number_value(stat.value, 0, 15); break;
-                case "def_dv": stats.dvs["defense"] = cleanup_number_value(stat.value, 0, 15); break;
-                case "spc_dv": stats.dvs["special"] = cleanup_number_value(stat.value, 0, 15); break;
-                case "spe_dv": stats.dvs["speed"] = cleanup_number_value(stat.value, 0, 15); break;
+                case "atk_dv": stats.dvs["attack"] = parse_int_clamped(stat.value, 0, 15); break;
+                case "def_dv": stats.dvs["defense"] = parse_int_clamped(stat.value, 0, 15); break;
+                case "spc_dv": stats.dvs["special"] = parse_int_clamped(stat.value, 0, 15); break;
+                case "spe_dv": stats.dvs["speed"] = parse_int_clamped(stat.value, 0, 15); break;
 
-                case "atk_stage": stats.stages["attack"] = cleanup_number_value(stat.value, -6, 6); break;
-                case "def_stage": stats.stages["defense"] = cleanup_number_value(stat.value, -6, 6); break;
-                case "spa_stage": stats.stages["special_attack"] = cleanup_number_value(stat.value, -6, 6); break;
-                case "spd_stage": stats.stages["special_defense"] = cleanup_number_value(stat.value, -6, 6); break;
-                case "spe_stage": stats.stages["speed"] = cleanup_number_value(stat.value, -6, 6); break;
+                case "atk_stage": stats.stages["attack"] = parse_int_clamped(stat.value, -6, 6); break;
+                case "def_stage": stats.stages["defense"] = parse_int_clamped(stat.value, -6, 6); break;
+                case "spa_stage": stats.stages["special_attack"] = parse_int_clamped(stat.value, -6, 6); break;
+                case "spd_stage": stats.stages["special_defense"] = parse_int_clamped(stat.value, -6, 6); break;
+                case "spe_stage": stats.stages["speed"] = parse_int_clamped(stat.value, -6, 6); break;
+                case "acc_stage": stats.stages["accuracy"] = parse_int_clamped(stat.value, -6, 6); break;
+                case "eva_stage": stats.stages["evasion"] = parse_int_clamped(stat.value, -6, 6); break;
 
                 case "move_1": stats.moves[0] = stat.value; break;
                 case "move_2": stats.moves[1] = stat.value; break;
@@ -409,16 +407,12 @@ function get_stats(is_player) {
                 case "species": stats.species = stat.value; break;
                 case "status": stats.status = stat.value; break;
                 case "friendship": stats.friendship = stat.value; break;
-                case "level": stats.level = parseInt(stat.value); break;
+                case "level": stats.level = parse_int_clamped(stat.value, 0, 255); break;
 
                 case "type_primary": stats.types[0] = furretcalc.Type[stat.value]; break;
                 case "type_secondary": stats.types[1] = furretcalc.Type[stat.value]; break;
             }
         }
-    }
-
-    if(!isFinite(stats.level)) {
-        stats.level = 1
     }
 
     return stats
@@ -871,6 +865,42 @@ function update_typings(is_player) {
 
     document.querySelector(`${get_stats_box(is_player)} .type_primary`).value = entry.types[0]
     document.querySelector(`${get_stats_box(is_player)} .type_secondary`).value = entry.types[1] ?? "None"
+}
+
+function parse_int_clamped(value, min, max) {
+    const int_value = parseInt(value)
+
+    if(!isFinite(int_value)) {
+        return min ?? 0
+    }
+
+    if(min != null && int_value < min) {
+        return min
+    }
+
+    if(max != null && int_value > max) {
+        return max
+    }
+
+    return int_value
+}
+
+function parse_float_clamped(value, min, max) {
+    const float_value = parseFloat(value)
+
+    if(!isFinite(float_value)) {
+        return min ?? 0
+    }
+
+    if(min != null && float_value < min) {
+        return min
+    }
+
+    if(max != null && float_value > max) {
+        return max
+    }
+
+    return float_value
 }
 
 window.clear_all_badges = clear_all_badges
