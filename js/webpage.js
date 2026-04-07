@@ -1,7 +1,7 @@
 "use strict"
 
 import * as furretcalc from "./furretcalc/furretcalc.js"
-import {get_crystal_pokemon, get_gold_pokemon, receives_special_defense_boost} from "./furretcalc/furretcalc.js";
+import {get_crystal_pokemon, receives_special_defense_boost} from "./furretcalc/furretcalc.js";
 
 furretcalc.load_furretcalc("./js/furretcalc")
     .then(() => set_up_widgets())
@@ -622,11 +622,11 @@ function set_up_widgets() {
     // FIXME: REMOVE THIS ONCE DONE
     // dummy data
     document.querySelector(`${get_stats_box(true)} .hp_stat`).value = 249
-    document.querySelector(`${get_stats_box(true)} .atk_stat`).value = 190
-    document.querySelector(`${get_stats_box(true)} .def_stat`).value = 167
-    document.querySelector(`${get_stats_box(true)} .spa_stat`).value = 139
+    document.querySelector(`${get_stats_box(true)} .atk_stat`).value = 169
+    document.querySelector(`${get_stats_box(true)} .def_stat`).value = 148
+    document.querySelector(`${get_stats_box(true)} .spa_stat`).value = 123
     document.querySelector(`${get_stats_box(true)} .spd_stat`).value = 139
-    document.querySelector(`${get_stats_box(true)} .spe_stat`).value = 202
+    document.querySelector(`${get_stats_box(true)} .spe_stat`).value = 179
     document.querySelector(`${get_stats_box(true)} .level`).value = 71
     document.querySelector(`${get_stats_box(true)} .friendship`).value = 255
     document.querySelector(`${get_stats_box(true)} .move_1`).value = "RETURN"
@@ -1037,7 +1037,7 @@ function reshow_range() {
         attack_name = "ATK"
         defense_name = "DEF"
         attack = infos.stats.data.stats.attack
-        defense = infos.stats_opposite.data.stats.attack
+        defense = infos.stats_opposite.data.stats.defense
         attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.attack))
         defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.defense))
 
