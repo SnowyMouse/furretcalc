@@ -229,6 +229,17 @@ export async function wait_loaded() {
     await loaded
 }
 
+export const StatBadgeBoostIndexCrystal = Object.freeze({
+    Attack: 0,
+    Defense: 5,
+    Special: 6,
+    Speed: 2
+})
+
+export function receives_special_defense_boost(unboosted_special_attack) {
+    return (unboosted_special_attack >= 206 && unboosted_special_attack <= 432) || (unboosted_special_attack >= 661) // gen 2 is great
+}
+
 export function calculate_battle_stats(out_of_battle_stats, badges, stages, status) {
     let { hp, attack, defense, special_attack, special_defense, speed } = out_of_battle_stats
     
@@ -237,11 +248,11 @@ export function calculate_battle_stats(out_of_battle_stats, badges, stages, stat
         case "paralyzed": speed = int_divide(speed, 4); break;
     }
 
-    const attack_boost = badges?.[0] ?? false
-    const defense_boost = badges?.[5] ?? false
-    const special_attack_boost = badges?.[6] ?? false
-    const special_defense_boost = special_attack_boost && ((special_attack >= 206 && special_attack <= 432) || (special_attack >= 661)) // gen 2 is great
-    const speed_boost = badges?.[2] ?? false
+    const attack_boost = badges?.[StatBadgeBoostIndexCrystal.Attack] ?? false
+    const defense_boost = badges?.[StatBadgeBoostIndexCrystal.Defense] ?? false
+    const special_attack_boost = badges?.[StatBadgeBoostIndexCrystal.Special] ?? false
+    const special_defense_boost = special_attack_boost && receives_special_defense_boost(special_attack)
+    const speed_boost = badges?.[StatBadgeBoostIndexCrystal.Speed] ?? false
 
     return {
         hp: hp < 1 ? 1 : hp,
@@ -361,7 +372,8 @@ export function calculate_damage_for_all_moves(attacker, defender, warnings, pro
 const MIN_ROLL = 217
 const MAX_ROLL = 255
 
-function calculate_damage_for_move(move_type, move_data_original, attacker, defender, warnings, { per_hit, weather, max_rolls, max_turns, cutoff }) {
+function calculate_damage_for_move(move_type, move_data_original, attacker, defender, warnings, properties) {
+    let { per_hit, weather, max_rolls, max_turns, cutoff } = properties
     const move_data = { ...move_data_original }
     apply_move_modifications(move_data, attacker)
 
@@ -380,7 +392,8 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
 
     const return_value = {
         "turn_chances": [],
-        per_hit
+        is_physical: noncrit_stats.is_physical,
+        properties
     }
 
     generate_rolls_for_move({
@@ -825,8 +838,6 @@ function calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rol
 
     inner(starting_hp, 0, 1)
 
-    console.log(must_recharge, chances)
-
     for(let v of chances) {
         if(v < 0.000001) {
             v = 0.0
@@ -928,7 +939,7 @@ function apply_type_effectiveness(move_type, total_damage, move_data, attacker, 
         total_damage = Math.max(int_divide(total_damage, 2), 1)
     }
 
-    const badge_boost_index = BADGE_BOOSTS[move_data.type]
+    const badge_boost_index = TypeBadgeBoosts[move_data.type]
     if(badge_boost_index != null && attacker.badges?.[badge_boost_index]) {
         total_damage += int_divide(total_damage, 8)
     }
@@ -956,23 +967,23 @@ function apply_type_effectiveness(move_type, total_damage, move_data, attacker, 
     return total_damage
 }
 
-const BADGE_BOOSTS = {
-    [Type.FLYING]: [0],
-    [Type.BUG]: [1],
-    [Type.NORMAL]: [2],
-    [Type.GHOST]: [3],
-    [Type.FIGHTING]: [4],
-    [Type.STEEL]: [5],
-    [Type.ICE]: [6],
-    [Type.DRAGON]: [7],
-    [Type.ROCK]: [8],
-    [Type.WATER]: [9],
-    [Type.ELECTRIC]: [10],
-    [Type.GRASS]: [11],
-    [Type.POISON]: [12],
-    [Type.PSYCHIC]: [13],
-    [Type.FIRE]: [14],
-    [Type.GROUND]: [15]
+export const TypeBadgeBoosts = {
+    [Type.FLYING]: 0,
+    [Type.BUG]: 1,
+    [Type.NORMAL]: 2,
+    [Type.GHOST]: 3,
+    [Type.FIGHTING]: 4,
+    [Type.STEEL]: 5,
+    [Type.ICE]: 6,
+    [Type.DRAGON]: 7,
+    [Type.ROCK]: 8,
+    [Type.WATER]: 9,
+    [Type.ELECTRIC]: 10,
+    [Type.GRASS]: 11,
+    [Type.POISON]: 12,
+    [Type.PSYCHIC]: 13,
+    [Type.FIRE]: 14,
+    [Type.GROUND]: 15
 }
 
 const TYPE_EFFECTIVENESS = {
@@ -1077,11 +1088,15 @@ function get_attack_and_defense_stat(move_data, attacker, defender) {
     const crit_physical_reuse_stat = attacker.data.stages.attack > attacker.data.stages.defense
     const crit_special_reuse_stat = attacker.data.stages.special_attack > attacker.data.stages.special_defense
 
+    let is_physical = damage_category_of_type(move_data.type) === DamageCategory.PHYSICAL
+    let is_special = !is_physical
+
     let stats
-    switch(damage_category_of_type(move_data.type)) {
-        case DamageCategory.PHYSICAL: stats = { attack: attacker.stats.attack, defense: defender.stats.defense, attack_crit: crit_physical_reuse_stat ? attacker.stats.attack : attacker.data.stats.attack, defense_crit: crit_physical_reuse_stat ? defender.stats.defense : defender.data.stats.defense }; break;
-        case DamageCategory.SPECIAL: stats = { attack: attacker.stats.special_attack, defense: defender.stats.special_defense, attack_crit: crit_special_reuse_stat ? attacker.stats.special_attack : attacker.data.stats.special_attack, defense_crit: crit_special_reuse_stat ? defender.stats.special_defense : defender.data.stats.special_defense }; break;
-        default: throw new Error("Unknown attack/defense stat")
+    if(is_physical) {
+        stats = { attack: attacker.stats.attack, defense: defender.stats.defense, attack_crit: crit_physical_reuse_stat ? attacker.stats.attack : attacker.data.stats.attack, defense_crit: crit_physical_reuse_stat ? defender.stats.defense : defender.data.stats.defense }
+    }
+    else {
+        stats = { attack: attacker.stats.special_attack, defense: defender.stats.special_defense, attack_crit: crit_special_reuse_stat ? attacker.stats.special_attack : attacker.data.stats.special_attack, defense_crit: crit_special_reuse_stat ? defender.stats.special_defense : defender.data.stats.special_defense }
     }
 
     while(stats.attack > 255 && stats.defense > 255) {
@@ -1094,7 +1109,10 @@ function get_attack_and_defense_stat(move_data, attacker, defender) {
         stats.defense_crit = Math.max(int_divide(stats.defense_crit, 4), 1)
     }
 
-    return [ { attack: stats.attack, defense: stats.defense }, { attack: stats.attack_crit, defense: stats.defense_crit } ]
+    return [
+        { attack: stats.attack, defense: stats.defense, is_physical, is_special },
+        { attack: stats.attack_crit, defense: stats.defense_crit, is_physical, is_special }
+    ]
 }
 
 function apply_move_modifications(move_data, attacker) {
@@ -1128,7 +1146,7 @@ export function get_hidden_power_stats({attack, defense, special, speed}) {
     return { base_power, type }
 }
 
-const HIDDEN_POWER_TYPE_TABLE = [
+const HIDDEN_POWER_TYPE_TABLE = Object.freeze([
     Type.FIGHTING,
     Type.FLYING,
     Type.POISON,
@@ -1145,4 +1163,4 @@ const HIDDEN_POWER_TYPE_TABLE = [
     Type.ICE,
     Type.DRAGON,
     Type.DARK
-]
+])

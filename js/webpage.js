@@ -1,7 +1,7 @@
 "use strict"
 
 import * as furretcalc from "./furretcalc/furretcalc.js"
-import {get_crystal_pokemon, get_gold_pokemon} from "./furretcalc/furretcalc.js";
+import {get_crystal_pokemon, get_gold_pokemon, receives_special_defense_boost} from "./furretcalc/furretcalc.js";
 
 furretcalc.load_furretcalc("./js/furretcalc")
     .then(() => set_up_widgets())
@@ -93,8 +93,8 @@ async function actually_recalculate() {
             suggestions[`warning_${warning_key}`] = warning_text
         }
 
-        format_move_data("#player_damage", player_stats, opponent_stats, player_moves, true, suggestions, properties.per_hit)
-        format_move_data("#enemy_damage", opponent_stats, player_stats, opponent_moves, false, suggestions, properties.per_hit)
+        format_move_data("#player_damage", player_stats, opponent_stats, player_moves, true, suggestions)
+        format_move_data("#enemy_damage", opponent_stats, player_stats, opponent_moves, false, suggestions)
 
         const notes = document.getElementById("suggestions_and_notes_list")
         let html = ""
@@ -184,10 +184,6 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
             continue
         }
 
-        move_data_infos[info_index] = {
-            data, move_name, move_data, is_player
-        }
-
         const index_int = parseInt(index)
         let move_display_name = move_data.name
         if(move_data.effect === "EFFECT_HIDDEN_POWER") {
@@ -212,9 +208,9 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         if(data == null) {
             continue
         }
-        const {base_low, base, minimum, maximum, turn_chances, average, per_hit} = data
+        const {base_low, base, minimum, maximum, turn_chances, average, properties} = data
 
-        const turn_name = per_hit ? "hit" : "turn"
+        const turn_name = properties.per_hit ? "hit" : "turn"
 
         let data_text = "";
 
@@ -293,6 +289,10 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         }
         else if(best_ttk_rating != null && cmp_ttk(best_ttk_rating, data) === 0) {
             document.querySelector(div_selector).classList.add("best_move")
+        }
+
+        move_data_infos[info_index] = {
+            data, move_name, move_data, is_player, stats, stats_opposite, displayed_range, properties
         }
     }
 
@@ -1001,15 +1001,123 @@ function show_range(info_index) {
 }
 
 function reshow_range() {
+    function stat_stage_to_string(stage) {
+        if(stage < 0) {
+            return `-${stage}`
+        }
+        if(stage > 0) {
+            return `+${stage}`
+        }
+        return ""
+    }
+
     const range_details = document.getElementById("range_details")
     const infos = move_data_infos[currently_displayed_range]
     if(infos == null) {
         return
     }
 
-    let html = `<div id='range_header'><a href='#' onclick='show_range(null)'>(Close)</a></div>`
+    const all_pokemon = get_crystal_pokemon()
 
-    html += `<h2>Ranges For ${infos.is_player ? "" : "Opponent's"} ${infos.move_data.name}</h2>`
+    const species_from_name = all_pokemon[infos.stats.data.species].name
+    const species_to_name = all_pokemon[infos.stats_opposite.data.species].name
+
+    let html = `<div id='range_header'><a href='#' onclick='show_range(null)'>(Close)</a></div>`
+    const move_name = infos.move_data.name
+
+    let attack_name
+    let defense_name
+    let attack
+    let defense
+
+    let attack_boost_info = []
+    let defense_boost_info = []
+
+    if(infos.data.is_physical) {
+        attack_name = "ATK"
+        defense_name = "DEF"
+        attack = infos.stats.data.stats.attack
+        defense = infos.stats_opposite.data.stats.attack
+        attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.attack))
+        defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.defense))
+
+        const attack_boost = infos.stats.badges?.[furretcalc.StatBadgeBoostIndexCrystal.Attack] ?? false
+        const defense_boost = infos.stats_opposite.badges?.[furretcalc.StatBadgeBoostIndexCrystal.Defense] ?? false
+
+        if(attack_boost) {
+            attack_boost_info.push("+ATK")
+        }
+        if(defense_boost) {
+            defense_boost_info.push("+DEF")
+        }
+    }
+    else {
+        attack_name = "SPA"
+        defense_name = "SPD"
+        attack = infos.stats.data.stats.special_attack
+        defense = infos.stats_opposite.data.stats.special_defense
+        attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.special_attack))
+        defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.special_defense))
+
+        const attack_boost = infos.stats.badges?.[furretcalc.StatBadgeBoostIndexCrystal.Special] ?? false
+        const defense_boost = (infos.stats_opposite.badges?.[furretcalc.StatBadgeBoostIndexCrystal.Special] ?? false) && receives_special_defense_boost(infos.stats_opposite.data.stats.special_attack)
+
+        if(attack_boost) {
+            attack_boost_info.push("+SPA")
+        }
+        if(defense_boost) {
+            defense_boost_info.push("+SPD")
+        }
+    }
+
+    if(infos.stats.badges?.[furretcalc.TypeBadgeBoosts[infos.move_data.type]]) {
+        attack_boost_info.push(`+${infos.move_data.type}`)
+    }
+
+    attack_boost_info = attack_boost_info.filter((a) => a != null && a !== "")
+    defense_boost_info = defense_boost_info.filter((a) => a != null && a !== "")
+
+    let attack_boost_text = ""
+    let defense_boost_text = ""
+
+    if(attack_boost_info.length > 0) {
+        attack_boost_text = `[${attack_boost_info.join(", ")}]`
+    }
+
+    if(defense_boost_info.length > 0) {
+        defense_boost_text = `[${defense_boost_info.join(", ")}]`
+    }
+
+    let chance_text = ""
+    if(infos.data.turn_chances[0] >= 1.0) {
+        chance_text = ` -- Guaranteed OHKO`
+    }
+    else {
+        for(const [k,v] of Object.entries(infos.data.turn_chances)) {
+            if(v >= infos.properties.cutoff) {
+                chance_text = ` -- ${(v * 100).toFixed(1)}% chance to `
+
+                const iteration_index = parseInt(k) + 1
+                if(iteration_index === 1) {
+                    chance_text += "OHKO"
+                }
+                else if(infos.properties.per_hit) {
+                    // can't call it a XHKO because we factor in accuracy, and missing is not hitting
+                    chance_text += `KO in ${iteration_index} tries`
+                }
+                else {
+                    chance_text += `KO in ${iteration_index} turns`
+                }
+
+                break
+            }
+        }
+    }
+
+
+
+    html += `<h2>Ranges For ${infos.is_player ? "" : "Opponent's"} ${move_name}</h2>`
+    html += `<div class="copypasta">Lvl. ${infos.stats.data.level} ${attack} ${attack_name} ${attack_boost_text} ${species_from_name} ${move_name} vs. ${defense} ${defense_name} ${defense_boost_text} ${species_to_name}: ${infos.displayed_range}${chance_text}</div>`
     html += "<table><tr><th>Damage</th><th>Probability</th></tr>"
     for(const [damage, probability] of infos.data.rolls) {
         html += `<tr><td>${damage}</td><td>${(probability * 100).toFixed(1)}%</td>`
