@@ -391,13 +391,60 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
         return return_value.error
     }
 
+    let accuracy_over_256 = move_data.accuracy_out_of_256
+    if(move_data.effect === "EFFECT_OHKO") {
+        const attacker_level = attacker.data.level
+        const defender_level = defender.data.level
+        const difference = attacker_level - defender_level
+        if(difference < 0) {
+            return null
+        }
+        accuracy_over_256 = Math.min(accuracy_over_256 + difference * 2, 255)
+    }
+    else if(move_data.effect === "EFFECT_THUNDER") {
+        switch(weather) {
+            // accuracy is set to 100% (note: this is redundant as it'll bypass accuracy anyway, but the game does this)
+            case Weather.RAIN: accuracy_over_256 = 255; break;
+
+            // accuracy is set to 50%
+            case Weather.SUN: accuracy_over_256 = 128; break;
+        }
+    }
+    accuracy_over_256 = calculate_final_accuracy_over_256(accuracy_over_256, attacker.data.stages.accuracy, defender.data.stages.evasion)
+
+    let accuracy = accuracy_over_256 / 256
+
+    const bypasses_accuracy = (() => {
+        if(move_data.effect === "EFFECT_ALWAYS_HIT") {
+            return true
+        }
+
+        if(accuracy_over_256 >= 255) {
+            return true
+        }
+
+        if(weather === Weather.RAIN && move_data.effect === "EFFECT_THUNDER") {
+            return true
+        }
+
+        return false
+    })()
+
+    // Apply accuracy
+    if(bypasses_accuracy) {
+        accuracy = 1.0
+    }
+
     calculate_damage_rolls_against_hp(
+        move_data,
         defender.data.stats.hp,
         return_value.rolls,
         return_value,
         cutoff,
         max_turns,
-        max_rolls
+        max_rolls,
+        per_hit,
+        accuracy
     )
 
     if(!per_hit) {
@@ -435,16 +482,15 @@ function adjust_turn_chances_for_move({move_data, weather, return_value}) {
             }
             break
 
-        case "EFFECT_HYPER_BEAM": {
+        case "EFFECT_ROLLOUT":
+        case "EFFECT_FURY_CUTTER": {
             return_value.per_hit = true
-            break
         }
     }
 
 }
 
 function generate_rolls_for_move({
-    move_type,
     move_data,
     noncrit_damage,
     crit_damage,
@@ -452,8 +498,7 @@ function generate_rolls_for_move({
     defender,
     return_value,
     per_hit,
-    warnings,
-    weather
+    warnings
 }) {
     let crit_chance = 17 / 256
 
@@ -536,52 +581,6 @@ function generate_rolls_for_move({
     return_value.minimum = rolls_damages.reduce((a, b) => a < b ? a : b)
     return_value.maximum = rolls_damages.reduce((a, b) => a > b ? a : b)
     return_value.average = (rolls_damages.reduce((a, b) => a + b) ?? 0) / rolls_damages.length
-
-    let accuracy_over_256 = move_data.accuracy_out_of_256
-    if(move_data.effect === "EFFECT_OHKO") {
-        const attacker_level = attacker.data.level
-        const defender_level = defender.data.level
-        const difference = attacker_level - defender_level
-        if(difference < 0) {
-            return null
-        }
-        accuracy_over_256 = Math.min(accuracy_over_256 + difference * 2, 255)
-    }
-    else if(move_data.effect === "EFFECT_THUNDER") {
-        switch(weather) {
-            // accuracy is set to 100% (note: this is redundant as it'll bypass accuracy anyway, but the game does this)
-            case Weather.RAIN: accuracy_over_256 = 255; break;
-
-            // accuracy is set to 50%
-            case Weather.SUN: accuracy_over_256 = 128; break;
-        }
-    }
-    accuracy_over_256 = calculate_final_accuracy_over_256(accuracy_over_256, attacker.data.stages.accuracy, defender.data.stages.evasion)
-
-    const accuracy = accuracy_over_256 / 256
-
-    const bypasses_accuracy = (() => {
-        if(move_data.effect === "EFFECT_ALWAYS_HIT") {
-            return true
-        }
-
-        if(accuracy_over_256 >= 255) {
-            return true
-        }
-
-        if(weather === Weather.RAIN && move_data.effect === "EFFECT_THUNDER") {
-            return true
-        }
-
-        return false
-    })()
-
-    // Apply accuracy
-    if(!bypasses_accuracy) {
-        for(const c in return_value.rolls) {
-            return_value.rolls[c][1] *= accuracy
-        }
-    }
 
     // Combine rolls
     return_value.rolls = combine_rolls(return_value.rolls, defender)
@@ -725,10 +724,15 @@ function combine_rolls(rolls, defender) {
     return new_rolls
 }
 
-function calculate_damage_rolls_against_hp(remaining_hp, rolls, return_value, cutoff, max_turns, max_rolls) {
+function calculate_damage_rolls_against_hp(move_data, starting_hp, rolls, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy) {
+    if(move_data.effect === "EFFECT_HYPER_BEAM") {
+        calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rolls, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy)
+        return
+    }
+
     // create buckets from 0 to HP-1
     const buckets = []
-    for(let i = 0; i < remaining_hp; i++) {
+    for(let i = 0; i < starting_hp; i++) {
         buckets.push([0.0, 0.0])
     }
 
@@ -754,7 +758,7 @@ function calculate_damage_rolls_against_hp(remaining_hp, rolls, return_value, cu
                 const prob_from = buckets[hp_int]
                 const prob_to = buckets[Math.max(hp_int - dmg, 0)]
 
-                const value_to_add = prob_from[0] * dmg_probability
+                const value_to_add = prob_from[0] * dmg_probability * accuracy
                 prob_from[1] -= value_to_add
                 prob_to[1] += value_to_add
             }
@@ -779,6 +783,71 @@ function calculate_damage_rolls_against_hp(remaining_hp, rolls, return_value, cu
             break
         }
     }
+}
+
+function calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rolls, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy) {
+    // A slower, recursive approach for move effects difficult to figure out linearly
+
+    const must_recharge = !per_hit && move_data.effect === "EFFECT_HYPER_BEAM"
+    const total_turns = Math.floor(Math.min(Math.log2(max_rolls) / Math.log2(rolls.length), max_turns))
+
+    const chances = []
+    for(let i = 0; i < total_turns; i++) {
+        chances.push(0)
+    }
+
+    const success_increment = must_recharge ? 2 : 1
+
+    function inner(remaining_hp, turn_index, current_universe_chance) {
+        if(chances[turn_index] == null) {
+            return
+        }
+
+        for(const [damage, chance] of rolls) {
+            const remaining_hp_after_damage = remaining_hp - damage
+            const total_probability = current_universe_chance * chance * accuracy
+
+            if(remaining_hp_after_damage < 1) {
+                for(let i = turn_index; i < chances.length; i++) {
+                    chances[i] = Math.min(chances[i] + total_probability, 1.0)
+                }
+                continue
+            }
+
+            inner(remaining_hp_after_damage, turn_index + success_increment, total_probability)
+        }
+
+        // But what if we miss?
+        if(accuracy < 1.0) {
+            inner(remaining_hp, turn_index + 1, current_universe_chance * (1.0 - accuracy))
+        }
+    }
+
+    inner(starting_hp, 0, 1)
+
+    console.log(must_recharge, chances)
+
+    for(let v of chances) {
+        if(v < 0.000001) {
+            v = 0.0
+        }
+        else if(v > 0.999999) {
+            v = 1.0
+        }
+
+        if(accuracy < 1.0 && v >= 0.9999) {
+            return_value.turn_chances.push(0.9999)
+            return
+        }
+
+        return_value.turn_chances.push(v)
+
+        if(v >= cutoff) {
+            break
+        }
+    }
+
+
 }
 
 function calculate_damage_subtotal(move_data, attacker, stats, is_crit) {

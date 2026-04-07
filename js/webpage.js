@@ -326,9 +326,6 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
             case "EFFECT_FURY_CUTTER":
                 suggestions["fury_cutter_wip"] = `Fury Cutter is not yet implemented. Damage displayed is only for the first hit.`
                 break
-            case "EFFECT_HYPER_BEAM":
-                suggestions["hyper_beam_wip"] = `Hyper Beam's recharge period is not factored in. Damage displayed is per hit.`
-                break
         }
     }
 }
