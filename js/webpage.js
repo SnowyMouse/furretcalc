@@ -228,8 +228,8 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         const fixedAmount = max_percent >= 10.0 ? 0 : 1
 
         let displayed_range = base_low === base ?
-            `${(min_percent * 100.0).toFixed(fixedAmount)}% (${displayed_min})`
-            : `${(min_percent * 100.0).toFixed(fixedAmount)}% - ${(max_percent * 100.0).toFixed(fixedAmount)}% (${displayed_min} - ${displayed_max})`
+            `${displayed_min} (${(min_percent * 100.0).toFixed(fixedAmount)}%)`
+            : `${displayed_min} - ${displayed_max} (${(min_percent * 100.0).toFixed(fixedAmount)}% - ${(max_percent * 100.0).toFixed(fixedAmount)}%)`
 
         data_text += `<a href="#" class="range range_clickable" onclick="show_range('${info_index}')">${displayed_range}</a>`
 
