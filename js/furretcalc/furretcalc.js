@@ -384,24 +384,37 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
     const [noncrit_stats, crit_stats] = get_attack_and_defense_stat(move_data, attacker, defender)
 
     const noncrit_damage = calculate_max_damage_for_move_with_stats(move_type, move_data, attacker, defender, noncrit_stats, false, weather)
-    const crit_damage = calculate_max_damage_for_move_with_stats(move_type, move_data, attacker, defender, crit_stats, true, weather)
 
     if(noncrit_damage === 0) {
         return null
     }
 
     const return_value = {
-        "turn_chances": [],
+        turn_chances: [],
         is_physical: noncrit_stats.is_physical,
-        properties
+        move_data,
+        properties,
+        rolls: null
     }
 
-    generate_rolls_for_move({
-        move_type, move_data, noncrit_damage, crit_damage, attacker, defender, return_value, per_hit, warnings, weather
+    const crit_damage = calculate_max_damage_for_move_with_stats(move_type, move_data, attacker, defender, crit_stats, true, weather)
+
+    const roll_generator = (multiplier) => generate_rolls_for_move({
+        move_type,
+        move_data,
+        noncrit_damage: Math.floor(noncrit_damage * multiplier),
+        crit_damage: Math.floor(crit_damage * multiplier),
+        attacker,
+        defender,
+        per_hit,
+        warnings,
+        weather
     })
 
-    if(return_value.error) {
-        return return_value.error
+    return_value.rolls = roll_generator(1.0)
+
+    if(return_value.rolls.error) {
+        return return_value.rolls.error
     }
 
     let accuracy_over_256 = move_data.accuracy_out_of_256
@@ -451,7 +464,6 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
     calculate_damage_rolls_against_hp(
         move_data,
         defender.data.stats.hp,
-        return_value.rolls,
         return_value,
         cutoff,
         max_turns,
@@ -509,7 +521,6 @@ function generate_rolls_for_move({
     crit_damage,
     attacker,
     defender,
-    return_value,
     per_hit,
     warnings
 }) {
@@ -519,61 +530,62 @@ function generate_rolls_for_move({
         crit_chance = 0
     }
 
+    let rolls
+    let base_low
+    let base
+
     const level = attacker.data.level
     switch(move_data.effect) {
         case "EFFECT_REVERSAL": {
-            return_value.base_low = noncrit_damage
-            return_value.base = noncrit_damage
-            return_value.rolls = [[noncrit_damage, 1.0]]
+            base_low = noncrit_damage
+            base = noncrit_damage
+            rolls = [[noncrit_damage, 1.0]]
             break
         }
         case "EFFECT_STATIC_DAMAGE": {
-            return_value.base = move_data.base_power
-            return_value.base_low = move_data.base_power
-            return_value.rolls = [[move_data.base_power, 1.0]]
+            base = move_data.base_power
+            base_low = move_data.base_power
+            rolls = [[move_data.base_power, 1.0]]
             break
         }
         case "EFFECT_LEVEL_DAMAGE": {
-            return_value.base = level
-            return_value.base_low = level
-            return_value.rolls = [[move_data.base_power, 1.0]]
+            base = level
+            base_low = level
+            rolls = [[move_data.base_power, 1.0]]
             break
         }
         case "EFFECT_OHKO": {
-            return_value.base = 65535
-            return_value.base_low = 65535
-            return_value.rolls = [[65535, 1.0]]
+            base = 65535
+            base_low = 65535
+            rolls = [[65535, 1.0]]
             break
         }
         case "EFFECT_PSYWAVE": {
             const max_damage = (level + int_divide(level, 2)) & 255
             if(max_damage === 0) {
                 (warnings ?? {})["psywave_warning"] = "Psywave will softlock the game if your level is 0 or 171."
-                return_value.rolls = null
-                return_value.error = "Game crash! (bad level)"
-                return
+                return { error: "Game crash! (bad level)" }
             }
 
-            let rolls = []
+            rolls = []
             for(let i = 1; i <= max_damage; i++) {
                 rolls.push([i, 1 / max_damage])
             }
 
-            return_value.base = max_damage
-            return_value.base_low = 1
-            return_value.rolls = rolls
+            base = max_damage
+            base_low = 1
             break
         }
         default: {
             const noncrit_chance = 1.0 - crit_chance
-            return_value.base = noncrit_damage
+            base = noncrit_damage
 
             const roll_count = (MAX_ROLL - MIN_ROLL + 1)
-            let rolls = []
+            rolls = []
             for (let i = MIN_ROLL; i <= MAX_ROLL; i++) {
                 let noncrit_damage_roll = int_divide(noncrit_damage * i, MAX_ROLL)
                 if(i === MIN_ROLL) {
-                    return_value.base_low = noncrit_damage_roll
+                    base_low = noncrit_damage_roll
                 }
 
                 let crit_damage_roll = int_divide(crit_damage * i, MAX_ROLL)
@@ -584,19 +596,21 @@ function generate_rolls_for_move({
             if (!per_hit) {
                 rolls = calculate_per_turn_rolls(move_data, rolls)
             }
-
-            return_value.rolls = rolls
         }
         break
     }
 
-    const rolls_damages = return_value.rolls.map((r) => r[0])
-    return_value.minimum = rolls_damages.reduce((a, b) => a < b ? a : b)
-    return_value.maximum = rolls_damages.reduce((a, b) => a > b ? a : b)
-    return_value.average = (rolls_damages.reduce((a, b) => a + b) ?? 0) / rolls_damages.length
+    const rolls_damages = rolls.map((r) => r[0])
+    const minimum = rolls_damages.reduce((a, b) => a < b ? a : b)
+    const maximum = rolls_damages.reduce((a, b) => a > b ? a : b)
+    const average = (rolls_damages.reduce((a, b) => a + b) ?? 0) / rolls_damages.length
 
     // Combine rolls
-    return_value.rolls = combine_rolls(return_value.rolls, defender)
+    rolls = combine_rolls(rolls, defender)
+
+    return {
+        minimum, maximum, average, rolls, base, base_low
+    }
 }
 
 function calculate_final_accuracy_over_256(base_accuracy, attacker_accuracy_stage, defender_evasion_stage) {
@@ -737,7 +751,9 @@ function combine_rolls(rolls, defender) {
     return new_rolls
 }
 
-function calculate_damage_rolls_against_hp(move_data, starting_hp, rolls, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy) {
+function calculate_damage_rolls_against_hp(move_data, starting_hp, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy) {
+    const rolls = return_value.rolls.rolls
+
     if(move_data.effect === "EFFECT_HYPER_BEAM") {
         calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rolls, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy)
         return

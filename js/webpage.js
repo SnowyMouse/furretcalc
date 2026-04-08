@@ -208,7 +208,7 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         if(data == null) {
             continue
         }
-        const {base_low, base, minimum, maximum, turn_chances, average, properties} = data
+        const {rolls: { base_low, base, minimum, maximum, average }, turn_chances, properties} = data
 
         const turn_name = properties.per_hit ? "hit" : "turn"
 
@@ -1070,8 +1070,8 @@ function reshow_range() {
         }
     }
 
-    if(infos.stats.badges?.[furretcalc.TypeBadgeBoosts[infos.move_data.type]]) {
-        attack_boost_info.push(`+${infos.move_data.type}`)
+    if(infos.stats.badges?.[furretcalc.TypeBadgeBoosts[infos.data.move_data.type]]) {
+        attack_boost_info.push(`+${infos.data.move_data.type}`)
     }
 
     attack_boost_info = attack_boost_info.filter((a) => a != null && a !== "")
@@ -1117,9 +1117,9 @@ function reshow_range() {
 
 
     html += `<h2>Ranges For ${infos.is_player ? "" : "Opponent's"} ${move_name}</h2>`
-    html += `<div class="copypasta">Lvl. ${infos.stats.data.level} ${attack} ${attack_name} ${attack_boost_text} ${species_from_name} ${move_name} vs. ${defense} ${defense_name} ${defense_boost_text} ${species_to_name}: ${infos.displayed_range}${chance_text}</div>`
+    html += `<div class="copypasta">Lvl. ${infos.stats.data.level} / ${attack} ${attack_name} ${attack_boost_text} ${species_from_name} ${move_name} vs. ${infos.stats.data.stats.hp} HP / ${defense} ${defense_name} ${defense_boost_text} ${species_to_name}: ${infos.displayed_range}${chance_text}</div>`
     html += "<table><tr><th>Damage</th><th>Probability</th></tr>"
-    for(const [damage, probability] of infos.data.rolls) {
+    for(const [damage, probability] of infos.data.rolls.rolls) {
         html += `<tr><td>${damage}</td><td>${(probability * 100).toFixed(1)}%</td>`
     }
     html += "</table>"
