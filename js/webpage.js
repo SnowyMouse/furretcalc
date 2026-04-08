@@ -307,10 +307,6 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
                 break
         }
 
-        if(furretcalc.HIGH_CRIT_MOVES.includes(move_name)) {
-            suggestions["crit_note"] = "High-crit moves aren't implemented yet."
-        }
-
         const move_data = all_moves[move_name]
         switch(move_data.effect) {
             case "EFFECT_FUTURE_SIGHT":
@@ -1095,7 +1091,12 @@ function reshow_range() {
     else {
         for(const [k,v] of Object.entries(infos.data.turn_chances)) {
             if(v >= infos.properties.cutoff) {
-                chance_text = ` -- ${(v * 100).toFixed(1)}% chance to `
+                if(v < 1.0) {
+                    chance_text = ` -- ${(v * 100).toFixed(1)}% chance to `
+                }
+                else {
+                    chance_text = ` -- Guaranteed `
+                }
 
                 const iteration_index = parseInt(k) + 1
                 if(iteration_index === 1) {

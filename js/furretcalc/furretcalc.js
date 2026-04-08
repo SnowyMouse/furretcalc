@@ -398,6 +398,7 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
     }
 
     const crit_damage = calculate_max_damage_for_move_with_stats(move_type, move_data, attacker, defender, crit_stats, true, weather)
+    const crit_rate = get_crit_chance({move_data, move_type, attacker})
 
     const roll_generator = (multiplier) => generate_rolls_for_move({
         move_type,
@@ -408,7 +409,8 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
         defender,
         per_hit,
         warnings,
-        weather
+        weather,
+        crit_rate
     })
 
     return_value.rolls = roll_generator(1.0)
@@ -515,8 +517,37 @@ function adjust_turn_chances_for_move({move_data, weather, return_value}) {
 
 }
 
+const CRIT_RATIO = Object.freeze([
+    17 / 256, // 1 / 15-ish
+    1 / 8,
+    1 / 4,
+    85 / 256, // 1 / 3-ish
+    1 / 2,
+    1 / 2,
+    1 / 2
+])
+
+function get_crit_chance({move_data, move_type}) {
+    let crit_rate_modifier = 0
+    if(move_data.effect === "EFFECT_FUTURE_SIGHT") {
+        return 0
+    }
+
+    // TODO if the attacker's species is farfetch'd and they have a stick, return CRIT_RATIO[2]
+    // TODO if the attacker's species is chansey and they have a lucky punch, return CRIT_RATIO[2]
+    // TODO check focus energy (+1)
+    // TODO check scope lens (+1)
+
+    if(HIGH_CRIT_MOVES.includes(move_type)) {
+        crit_rate_modifier += 2
+    }
+
+    return CRIT_RATIO[crit_rate_modifier]
+}
+
 function generate_rolls_for_move({
     move_data,
+    crit_rate,
     noncrit_damage,
     crit_damage,
     attacker,
@@ -524,12 +555,6 @@ function generate_rolls_for_move({
     per_hit,
     warnings
 }) {
-    let crit_chance = 17 / 256
-
-    if(move_data.effect === "EFFECT_FUTURE_SIGHT") {
-        crit_chance = 0
-    }
-
     let rolls
     let base_low
     let base
@@ -577,7 +602,7 @@ function generate_rolls_for_move({
             break
         }
         default: {
-            const noncrit_chance = 1.0 - crit_chance
+            const noncrit_chance = 1.0 - crit_rate
             base = noncrit_damage
 
             const roll_count = (MAX_ROLL - MIN_ROLL + 1)
@@ -590,7 +615,7 @@ function generate_rolls_for_move({
 
                 let crit_damage_roll = int_divide(crit_damage * i, MAX_ROLL)
                 rolls.push([noncrit_damage_roll, noncrit_chance / roll_count])
-                rolls.push([crit_damage_roll, crit_chance / roll_count])
+                rolls.push([crit_damage_roll, crit_rate / roll_count])
             }
 
             if (!per_hit) {
