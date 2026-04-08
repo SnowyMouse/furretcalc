@@ -225,11 +225,11 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         const min_percent = displayed_min / stats_opposite.stats.hp
         const max_percent = displayed_max / stats_opposite.stats.hp
 
-        const fixedAmount = max_percent >= 10.0 ? 0 : 1
+        const fixer = max_percent >= 10.0 ? no_decimal : single_decimal
 
         let displayed_range = base_low === base ?
-            `${displayed_min} (${(min_percent * 100.0).toFixed(fixedAmount)}%)`
-            : `${displayed_min} - ${displayed_max} (${(min_percent * 100.0).toFixed(fixedAmount)}% - ${(max_percent * 100.0).toFixed(fixedAmount)}%)`
+            `${displayed_min} (${fixer(min_percent * 100.0)}%)`
+            : `${displayed_min} - ${displayed_max} (${fixer(min_percent * 100.0)}% - ${fixer(max_percent * 100.0)}%)`
 
         data_text += `<a href="#" class="range range_clickable" onclick="show_range('${info_index}')">${displayed_range}</a>`
 
@@ -263,7 +263,7 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
                     data_text += "&gt;99.9"
                 }
                 else {
-                    data_text += (chance * 100.0).toFixed(1)
+                    data_text += single_decimal(chance * 100.0)
                 }
                 data_text += `%</div></div>`
             }
@@ -274,11 +274,11 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
             data_text += `</div><br />`
             data_text += `<div class="range_row">`
             data_text += `<div class=\"range_turns\">Min ${turn_name}s</div>`
-            data_text += `<div class=\"range_percentage\">${Math.max(stats_opposite.data.stats.hp / maximum, 1).toFixed(1)}</div>`
+            data_text += `<div class=\"range_percentage\">${single_decimal(Math.max(stats_opposite.data.stats.hp / maximum, 1))}</div>`
             data_text += `</div>`
             data_text += `<div class="range_row">`
             data_text += `<div class=\"range_turns\">Avg ${turn_name}s</div>`
-            data_text += `<div class=\"range_percentage\">${Math.max(stats_opposite.data.stats.hp / average, 1).toFixed(1)}</div>`
+            data_text += `<div class=\"range_percentage\">${single_decimal(Math.max(stats_opposite.data.stats.hp / average, 1))}</div>`
             data_text += `</div>`
         }
 
@@ -1092,7 +1092,7 @@ function reshow_range() {
         for(const [k,v] of Object.entries(infos.data.turn_chances)) {
             if(v >= infos.properties.cutoff) {
                 if(v < 1.0) {
-                    chance_text = ` -- ${(v * 100).toFixed(1)}% chance to `
+                    chance_text = ` -- ${single_decimal(v * 100)}% chance to `
                 }
                 else {
                     chance_text = ` -- Guaranteed `
@@ -1121,7 +1121,7 @@ function reshow_range() {
     html += `<div class="copypasta">Lvl. ${infos.stats.data.level} / ${attack} ${attack_name} ${attack_boost_text} ${species_from_name} ${move_name} vs. ${infos.stats.data.stats.hp} HP / ${defense} ${defense_name} ${defense_boost_text} ${species_to_name}: ${infos.displayed_range}${chance_text}</div>`
     html += "<table><tr><th>Damage</th><th>Probability</th></tr>"
     for(const [damage, probability] of infos.data.rolls.rolls) {
-        html += `<tr><td>${damage}</td><td>${(probability * 100).toFixed(1)}%</td>`
+        html += `<tr><td>${damage}</td><td>${single_decimal(probability * 100)}%</td>`
     }
     html += "</table>"
 
@@ -1137,4 +1137,12 @@ window.show_range = show_range
 window.show_instructions = () => {
     document.getElementById("instructions").style.display = "block"
     document.getElementById("instructions_show").style.display = "none"
+}
+
+function single_decimal(number) {
+    return (Math.floor(Math.abs(number) * 10) / 10 * (number < 0 ? -1 : 1)).toFixed(1)
+}
+
+function no_decimal(number) {
+    return (Math.floor(Math.abs(number)) * (number < 0 ? -1 : 1)).toFixed(0)
 }
