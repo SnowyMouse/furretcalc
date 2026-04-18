@@ -476,6 +476,8 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
         accuracy
     )
 
+    return_value.rolls.accuracy = accuracy
+
     if(!per_hit) {
         adjust_turn_chances_for_move({move_data, return_value, weather})
     }

@@ -1086,17 +1086,17 @@ function reshow_range() {
 
     let chance_text = " -- "
     if(infos.data.turn_chances[0] >= 1.0) {
-        chance_text = `Guaranteed OHKO`
+        chance_text += `Guaranteed OHKO`
     }
     else {
         let found = false
         for(const [k,v] of Object.entries(infos.data.turn_chances)) {
             if(v >= infos.properties.cutoff) {
                 if(v < 1.0) {
-                    chance_text = `${single_decimal(v * 100)}% chance to `
+                    chance_text += `${single_decimal(v * 100)}% chance to `
                 }
                 else {
-                    chance_text = `Guaranteed `
+                    chance_text += `Guaranteed `
                 }
 
                 const iteration_index = parseInt(k) + 1
@@ -1105,7 +1105,7 @@ function reshow_range() {
                 }
                 else if(infos.properties.per_hit) {
                     // can't call it a XHKO because we factor in accuracy, and missing is not hitting
-                    chance_text += `KO in ${iteration_index} tries`
+                    chance_text += `KO in ${iteration_index} attacks`
                 }
                 else {
                     chance_text += `KO in ${iteration_index} turns`
@@ -1126,8 +1126,11 @@ function reshow_range() {
     html += `<h2>Ranges For ${infos.is_player ? "" : "Opponent's"} ${move_name}</h2>`
     html += `<div class="copypasta">Lvl. ${infos.stats.data.level} / ${attack} ${attack_name} ${attack_boost_text} ${species_from_name} ${move_name} vs. ${infos.stats.data.stats.hp} HP / ${defense} ${defense_name} ${defense_boost_text} ${species_to_name}: ${infos.displayed_range}${chance_text}</div>`
     html += "<table><tr><th>Damage</th><th>Probability</th></tr>"
+    if(infos.data.rolls.accuracy < 1.0) {
+        html += `<tr><td>Miss</td><td>${single_decimal(100 - 100 * infos.data.rolls.accuracy)}%</td>`
+    }
     for(const [damage, probability] of infos.data.rolls.rolls) {
-        html += `<tr><td>${damage}</td><td>${single_decimal(probability * 100)}%</td>`
+        html += `<tr><td>${damage}</td><td>${single_decimal(probability * 100 * infos.data.rolls.accuracy)}%</td>`
     }
     html += "</table>"
 
