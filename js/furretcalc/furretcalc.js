@@ -377,7 +377,7 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
     const move_data = { ...move_data_original }
     apply_move_modifications(move_data, attacker)
 
-    if(move_data.base_power === 0) {
+    if(move_data.base_power === 0 && move_data.effect !== "EFFECT_OHKO") {
         return null
     }
 
