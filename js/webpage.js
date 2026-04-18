@@ -1084,18 +1084,19 @@ function reshow_range() {
         defense_boost_text = `[${defense_boost_info.join(", ")}]`
     }
 
-    let chance_text = ""
+    let chance_text = " -- "
     if(infos.data.turn_chances[0] >= 1.0) {
-        chance_text = ` -- Guaranteed OHKO`
+        chance_text = `Guaranteed OHKO`
     }
     else {
+        let found = false
         for(const [k,v] of Object.entries(infos.data.turn_chances)) {
             if(v >= infos.properties.cutoff) {
                 if(v < 1.0) {
-                    chance_text = ` -- ${single_decimal(v * 100)}% chance to `
+                    chance_text = `${single_decimal(v * 100)}% chance to `
                 }
                 else {
-                    chance_text = ` -- Guaranteed `
+                    chance_text = `Guaranteed `
                 }
 
                 const iteration_index = parseInt(k) + 1
@@ -1110,8 +1111,13 @@ function reshow_range() {
                     chance_text += `KO in ${iteration_index} turns`
                 }
 
+                found = true
                 break
             }
+        }
+
+        if(!found) {
+            chance_text += `KO in ${single_decimal(infos.stats_opposite.stats.hp / infos.data.rolls.average)} turns on average`
         }
     }
 

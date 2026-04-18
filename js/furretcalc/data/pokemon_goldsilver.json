@@ -3156,8 +3156,8 @@
     "ABRA": {
         "name": "Abra",
         "types": [
-            "PSYCHIC_TYPE",
-            "PSYCHIC_TYPE"
+            "PSYCHIC",
+            "PSYCHIC"
         ],
         "base_stats": [
             25,
@@ -3177,8 +3177,8 @@
     "KADABRA": {
         "name": "Kadabra",
         "types": [
-            "PSYCHIC_TYPE",
-            "PSYCHIC_TYPE"
+            "PSYCHIC",
+            "PSYCHIC"
         ],
         "base_stats": [
             40,
@@ -3234,8 +3234,8 @@
     "ALAKAZAM": {
         "name": "Alakazam",
         "types": [
-            "PSYCHIC_TYPE",
-            "PSYCHIC_TYPE"
+            "PSYCHIC",
+            "PSYCHIC"
         ],
         "base_stats": [
             55,
@@ -4041,7 +4041,7 @@
         "name": "Slowpoke",
         "types": [
             "WATER",
-            "PSYCHIC_TYPE"
+            "PSYCHIC"
         ],
         "base_stats": [
             90,
@@ -4094,7 +4094,7 @@
         "name": "Slowbro",
         "types": [
             "WATER",
-            "PSYCHIC_TYPE"
+            "PSYCHIC"
         ],
         "base_stats": [
             95,
@@ -4941,8 +4941,8 @@
     "DROWZEE": {
         "name": "Drowzee",
         "types": [
-            "PSYCHIC_TYPE",
-            "PSYCHIC_TYPE"
+            "PSYCHIC",
+            "PSYCHIC"
         ],
         "base_stats": [
             60,
@@ -4998,8 +4998,8 @@
     "HYPNO": {
         "name": "Hypno",
         "types": [
-            "PSYCHIC_TYPE",
-            "PSYCHIC_TYPE"
+            "PSYCHIC",
+            "PSYCHIC"
         ],
         "base_stats": [
             85,
@@ -5288,7 +5288,7 @@
         "name": "Exeggcute",
         "types": [
             "GRASS",
-            "PSYCHIC_TYPE"
+            "PSYCHIC"
         ],
         "base_stats": [
             60,
@@ -5341,7 +5341,7 @@
         "name": "Exeggutor",
         "types": [
             "GRASS",
-            "PSYCHIC_TYPE"
+            "PSYCHIC"
         ],
         "base_stats": [
             95,
@@ -6339,7 +6339,7 @@
         "name": "Starmie",
         "types": [
             "WATER",
-            "PSYCHIC_TYPE"
+            "PSYCHIC"
         ],
         "base_stats": [
             60,
@@ -6375,8 +6375,8 @@
     "MR__MIME": {
         "name": "Mr. Mime",
         "types": [
-            "PSYCHIC_TYPE",
-            "PSYCHIC_TYPE"
+            "PSYCHIC",
+            "PSYCHIC"
         ],
         "base_stats": [
             40,
@@ -6494,7 +6494,7 @@
         "name": "Jynx",
         "types": [
             "ICE",
-            "PSYCHIC_TYPE"
+            "PSYCHIC"
         ],
         "base_stats": [
             65,
@@ -7871,8 +7871,8 @@
     "MEWTWO": {
         "name": "Mewtwo",
         "types": [
-            "PSYCHIC_TYPE",
-            "PSYCHIC_TYPE"
+            "PSYCHIC",
+            "PSYCHIC"
         ],
         "base_stats": [
             106,
@@ -7932,8 +7932,8 @@
     "MEW": {
         "name": "Mew",
         "types": [
-            "PSYCHIC_TYPE",
-            "PSYCHIC_TYPE"
+            "PSYCHIC",
+            "PSYCHIC"
         ],
         "base_stats": [
             100,
@@ -9306,7 +9306,7 @@
     "NATU": {
         "name": "Natu",
         "types": [
-            "PSYCHIC_TYPE",
+            "PSYCHIC",
             "FLYING"
         ],
         "base_stats": [
@@ -9351,7 +9351,7 @@
     "XATU": {
         "name": "Xatu",
         "types": [
-            "PSYCHIC_TYPE",
+            "PSYCHIC",
             "FLYING"
         ],
         "base_stats": [
@@ -10257,8 +10257,8 @@
     "ESPEON": {
         "name": "Espeon",
         "types": [
-            "PSYCHIC_TYPE",
-            "PSYCHIC_TYPE"
+            "PSYCHIC",
+            "PSYCHIC"
         ],
         "base_stats": [
             65,
@@ -10413,7 +10413,7 @@
         "name": "Slowking",
         "types": [
             "WATER",
-            "PSYCHIC_TYPE"
+            "PSYCHIC"
         ],
         "base_stats": [
             95,
@@ -10514,8 +10514,8 @@
     "UNOWN": {
         "name": "Unown",
         "types": [
-            "PSYCHIC_TYPE",
-            "PSYCHIC_TYPE"
+            "PSYCHIC",
+            "PSYCHIC"
         ],
         "base_stats": [
             48,
@@ -10535,8 +10535,8 @@
     "WOBBUFFET": {
         "name": "Wobbuffet",
         "types": [
-            "PSYCHIC_TYPE",
-            "PSYCHIC_TYPE"
+            "PSYCHIC",
+            "PSYCHIC"
         ],
         "base_stats": [
             190,
@@ -10569,7 +10569,7 @@
         "name": "Girafarig",
         "types": [
             "NORMAL",
-            "PSYCHIC_TYPE"
+            "PSYCHIC"
         ],
         "base_stats": [
             70,
@@ -12312,7 +12312,7 @@
         "name": "Smoochum",
         "types": [
             "ICE",
-            "PSYCHIC_TYPE"
+            "PSYCHIC"
         ],
         "base_stats": [
             45,
@@ -12930,7 +12930,7 @@
     "LUGIA": {
         "name": "Lugia",
         "types": [
-            "PSYCHIC_TYPE",
+            "PSYCHIC",
             "FLYING"
         ],
         "base_stats": [
@@ -13044,7 +13044,7 @@
     "CELEBI": {
         "name": "Celebi",
         "types": [
-            "PSYCHIC_TYPE",
+            "PSYCHIC",
             "GRASS"
         ],
         "base_stats": [

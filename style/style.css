@@ -466,7 +466,9 @@ header p {
     text-align: center;
     font-size: 12px;
     border: 1px solid #FFEEDD;
-    padding: 2px;
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 4px;
     margin-top: 4px;
     user-select: all;
+    font-family: "Roboto Bold", sans-serif;
 }

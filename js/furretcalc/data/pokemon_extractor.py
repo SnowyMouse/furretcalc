@@ -112,7 +112,13 @@ for c in files:
             continue
         break
     
-    current_pokemon["types"] = types
+    current_pokemon["types"] = []
+    for t in types:
+        if t == "PSYCHIC_TYPE":
+            current_pokemon["types"].append("PSYCHIC")
+        else:
+            current_pokemon["types"].append(t)
+
     current_pokemon["base_stats"] = base
     current_pokemon["level_up_moves"] = []
 

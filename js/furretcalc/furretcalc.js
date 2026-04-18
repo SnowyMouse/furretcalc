@@ -463,6 +463,8 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
         accuracy = 1.0
     }
 
+    return_value.rolls.average *= accuracy
+
     calculate_damage_rolls_against_hp(
         move_data,
         defender.data.stats.hp,
