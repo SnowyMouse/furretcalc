@@ -125,19 +125,18 @@ async function get_parties(url, pokemon) {
         }
     }
 
-    window.generate_hp_dv = generate_hp_dv
-
     for(const [k,v] of Object.entries(parties_data)) {
         const [atk_dv, def_dev, spd_dv, spc_dv] = v.dvs
 
-        v.dvs = Object.freeze({
+        v.dvs = {
             attack: atk_dv,
             defense: def_dev,
             special: spc_dv,
             speed: spd_dv
-        })
+        }
 
-        const hp_dv = generate_hp_dv(v.dvs)
+        v.dvs.hp = calculate_hp_dv(v.dvs)
+        v.dvs = Object.freeze(v.dvs)
 
         for(const [tk,trainer] of Object.entries(v.trainers)) {
             for(const [pk,monster] of Object.entries(trainer.party)) {
@@ -176,14 +175,7 @@ async function get_parties(url, pokemon) {
                     monster.moves = Object.freeze(monster.moves)
                 }
 
-                monster.stats = Object.freeze({
-                    "hp": calculate_hp_stat(monster.level, matched_monster.base_stats["hp"], hp_dv),
-                    "attack": calculate_non_hp_stat(monster.level, matched_monster.base_stats["attack"], v.dvs.attack),
-                    "defense": calculate_non_hp_stat(monster.level, matched_monster.base_stats["defense"], v.dvs.defense),
-                    "special_attack": calculate_non_hp_stat(monster.level, matched_monster.base_stats["special_attack"], v.dvs.special),
-                    "special_defense": calculate_non_hp_stat(monster.level, matched_monster.base_stats["special_defense"], v.dvs.special),
-                    "speed": calculate_non_hp_stat(monster.level, matched_monster.base_stats["speed"], v.dvs.speed)
-                })
+                monster.stats = calculate_monster_stats(monster.level, matched_monster.base_stats, v.dvs, null)
 
                 trainer.party[pk] = Object.freeze(monster)
             }
@@ -197,15 +189,32 @@ async function get_parties(url, pokemon) {
     return Object.freeze(parties_data)
 }
 
-function calculate_hp_stat(level, base, dv) {
-    return int_divide(((base + dv) * 2) * level, 100) + 10 + level
+export function calculate_monster_stats(level, base_stats, dvs, statexp = null) {
+    const hp_dv = calculate_hp_dv(dvs)
+    return Object.freeze({
+        "hp": calculate_hp_stat(level, base_stats["hp"], hp_dv, statexp?.hp ?? 0),
+        "attack": calculate_non_hp_stat(level, base_stats["attack"], dvs.attack, statexp?.attack ?? 0),
+        "defense": calculate_non_hp_stat(level, base_stats["defense"], dvs.defense, statexp?.defense ?? 0),
+        "special_attack": calculate_non_hp_stat(level, base_stats["special_attack"], dvs.special, statexp?.special ?? 0),
+        "special_defense": calculate_non_hp_stat(level, base_stats["special_defense"], dvs.special, statexp?.special ?? 0),
+        "speed": calculate_non_hp_stat(level, base_stats["speed"], dvs.speed, statexp?.speed ?? 0)
+    })
 }
 
-function calculate_non_hp_stat(level, base, dv) {
-    return int_divide(((base + dv) * 2) * level, 100) + 5
+function calculate_hp_stat(level, base, dv, statexp) {
+    return int_divide(((base + dv) * 2 + calculate_statexp_part(statexp)) * level, 100) + 10 + level
 }
 
-function generate_hp_dv(dvs) {
+function calculate_non_hp_stat(level, base, dv, statexp) {
+    return int_divide(((base + dv) * 2 + calculate_statexp_part(statexp)) * level, 100) + 5
+}
+
+function calculate_statexp_part(statexp) {
+    const sqrt = Math.ceil(Math.sqrt(statexp))
+    return Math.floor(Math.min(sqrt, 255) / 4)
+}
+
+export function calculate_hp_dv(dvs) {
     let hp = 0
     if((dvs.attack & 1) === 1) {
         hp += 8
@@ -403,8 +412,8 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
     const roll_generator = (multiplier) => generate_rolls_for_move({
         move_type,
         move_data,
-        noncrit_damage: Math.floor(noncrit_damage * multiplier),
-        crit_damage: Math.floor(crit_damage * multiplier),
+        noncrit_damage: Math.max(Math.floor(noncrit_damage * multiplier), 1),
+        crit_damage: Math.max(Math.floor(crit_damage * multiplier), 1),
         attacker,
         defender,
         per_hit,
@@ -612,12 +621,12 @@ function generate_rolls_for_move({
             const roll_count = (MAX_ROLL - MIN_ROLL + 1)
             rolls = []
             for (let i = MIN_ROLL; i <= MAX_ROLL; i++) {
-                let noncrit_damage_roll = int_divide(noncrit_damage * i, MAX_ROLL)
+                let noncrit_damage_roll = Math.max(int_divide(noncrit_damage * i, MAX_ROLL), 1)
                 if(i === MIN_ROLL) {
                     base_low = noncrit_damage_roll
                 }
 
-                let crit_damage_roll = int_divide(crit_damage * i, MAX_ROLL)
+                let crit_damage_roll = Math.max(int_divide(crit_damage * i, MAX_ROLL), 1)
                 rolls.push([noncrit_damage_roll, noncrit_chance / roll_count])
                 rolls.push([crit_damage_roll, crit_rate / roll_count])
             }

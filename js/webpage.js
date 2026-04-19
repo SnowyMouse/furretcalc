@@ -14,6 +14,8 @@ function recalculate() {
         return
     }
 
+    quickly_update_stats()
+
     if(debounce_timer != null) {
         clearTimeout(debounce_timer)
     }
@@ -375,13 +377,15 @@ function get_stats(is_player) {
     const stats = {
         stats: {},
         dvs: {},
+        statexp: {},
         stages: {},
         types: [null, null],
         moves: ["NO_MOVE", "NO_MOVE", "NO_MOVE", "NO_MOVE"],
         species: null,
         item: null,
         status: null,
-        level: null
+        level: null,
+        manual_stat_input: false
     }
     for(const stat of document.querySelectorAll(`${get_stats_box(is_player)} input, ${get_stats_box(is_player)} select`)) {
         for(const c of stat.classList) {
@@ -392,11 +396,16 @@ function get_stats(is_player) {
                 case "spa_stat": stats.stats["special_attack"] = parse_int_clamped(stat.value, 1, 999); break;
                 case "spd_stat": stats.stats["special_defense"] = parse_int_clamped(stat.value, 1, 999); break;
                 case "spe_stat": stats.stats["speed"] = parse_int_clamped(stat.value, 1, 999); break;
-                
+
                 case "atk_dv": stats.dvs["attack"] = parse_int_clamped(stat.value, 0, 15); break;
                 case "def_dv": stats.dvs["defense"] = parse_int_clamped(stat.value, 0, 15); break;
                 case "spc_dv": stats.dvs["special"] = parse_int_clamped(stat.value, 0, 15); break;
                 case "spe_dv": stats.dvs["speed"] = parse_int_clamped(stat.value, 0, 15); break;
+
+                case "atk_statexp": stats.statexp["attack"] = parse_int_clamped(stat.value, 0, 65535); break;
+                case "def_statexp": stats.statexp["defense"] = parse_int_clamped(stat.value, 0, 65535); break;
+                case "spc_statexp": stats.statexp["special"] = parse_int_clamped(stat.value, 0, 65535); break;
+                case "spe_statexp": stats.statexp["speed"] = parse_int_clamped(stat.value, 0, 65535); break;
 
                 case "atk_stage": stats.stages["attack"] = parse_int_clamped(stat.value, -6, 6); break;
                 case "def_stage": stats.stages["defense"] = parse_int_clamped(stat.value, -6, 6); break;
@@ -419,11 +428,42 @@ function get_stats(is_player) {
 
                 case "type_primary": stats.types[0] = furretcalc.Type[stat.value]; break;
                 case "type_secondary": stats.types[1] = furretcalc.Type[stat.value]; break;
+
+                case "manual_stat_input": stats.manual_stat_input = stat.checked; break;
             }
         }
     }
 
+    if(!stats.manual_stat_input) {
+        const base_stats = furretcalc.get_crystal_pokemon()[stats.species].base_stats
+        stats.stats = furretcalc.calculate_monster_stats(stats.level, base_stats, stats.dvs, stats.statexp)
+    }
+
     return stats
+}
+
+function quickly_update_stats(is_player) {
+    if(is_player === undefined) {
+        quickly_update_stats(true)
+        quickly_update_stats(false)
+        return
+    }
+
+    const stats = get_stats(is_player)
+
+    // TODO: make updating these faster
+    document.querySelector(`${get_stats_box(is_player)} .spd_dv`).value = stats.dvs["special"]
+    document.querySelector(`${get_stats_box(is_player)} .spd_statexp`).value = stats.statexp["special"]
+    document.querySelector(`${get_stats_box(is_player)} .hp_dv`).value = furretcalc.calculate_hp_dv(stats.dvs)
+
+    if(!stats.manual_stat_input) {
+        document.querySelector(`${get_stats_box(is_player)} .hp_stat`).value = stats.stats.hp
+        document.querySelector(`${get_stats_box(is_player)} .atk_stat`).value = stats.stats.attack
+        document.querySelector(`${get_stats_box(is_player)} .def_stat`).value = stats.stats.defense
+        document.querySelector(`${get_stats_box(is_player)} .spa_stat`).value = stats.stats.special_attack
+        document.querySelector(`${get_stats_box(is_player)} .spd_stat`).value = stats.stats.special_defense
+        document.querySelector(`${get_stats_box(is_player)} .spe_stat`).value = stats.stats.speed
+    }
 }
 
 function set_up_widgets() {
@@ -432,61 +472,65 @@ function set_up_widgets() {
     // Add in stat placeholder stuff
     for(const placeholder of document.getElementsByClassName("pokemon_stats_placeholder")) {
         // smooth flowing from DVs to stats and then
-        let dv_tabs = tabindex
-        let stat_tabs = dv_tabs + 1
-        let stage_tabs = stat_tabs + 1
-        let misc_tabs = stage_tabs + 1
-
+        let stat_tabs = tabindex
+        let misc_tabs = stat_tabs + 1
 
         placeholder.innerHTML = `
     <table class="stat_input">
     <tr>
         <th></th>
         <th>IVs</th>
+        <th class="statexp_column">Stat EXP</th>
         <th>Stat</th>
         <th>Stage</th>
         <th>Final</th>
     </tr>
     <tr>
         <td title="Hitpoints">HP</td>
-        <td>--</td>
-        <td><input type="text" class="hp_stat" value="0" tabindex="${stat_tabs}"></td>
+        <td><input type="text" class="hp_dv" value="0" tabindex="${stat_tabs}" readonly disabled></td>
+        <td class="statexp_column"><input type="text" class="hp_statexp" value="0" tabindex="${stat_tabs}"></td>
+        <td><input type="text" class="hp_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
         <td>--</td>
         <td class="hp_final">--</td>
     </tr>
     <tr>
         <td title="Attack">ATK</td>
-        <td><input type="text" class="atk_dv" value="0" tabindex="${dv_tabs}"></td>
-        <td><input type="text" class="atk_stat" value="0" tabindex="${stat_tabs}"></td>
-        <td><select class="atk_stage stat_stage" tabindex="${stage_tabs}"></select></td>
+        <td><input type="text" class="atk_dv" value="0" tabindex="${stat_tabs}"></td>
+        <td class="statexp_column"><input type="text" class="atk_statexp" value="0" tabindex="${stat_tabs}"></td>
+        <td><input type="text" class="atk_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
+        <td><select class="atk_stage stat_stage" tabindex="${stat_tabs}"></select></td>
         <td class="atk_final">--</td>
     </tr>
     <tr>
         <td title="Defense">DEF</td>
-        <td><input type="text" class="def_dv" value="0" tabindex="${dv_tabs}"></td>
-        <td><input type="text" class="def_stat" value="0" tabindex="${stat_tabs}"</td>
-        <td><select class="def_stage stat_stage" tabindex="${stage_tabs}"></select></td>
+        <td><input type="text" class="def_dv" value="0" tabindex="${stat_tabs}"></td>
+        <td class="statexp_column"><input type="text" class="def_statexp" value="0" tabindex="${stat_tabs}"></td>
+        <td><input type="text" class="def_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"</td>
+        <td><select class="def_stage stat_stage" tabindex="${stat_tabs}"></select></td>
         <td class="def_final">--</td>
     </tr>
     <tr>
         <td title="Special Attack">SPA</td>
-        <td><input type="text" class="spc_dv" value="0" tabindex="${dv_tabs}"></td>
-        <td><input type="text" class="spa_stat" value="0" tabindex="${stat_tabs}"></td>
-        <td><select class="spa_stage stat_stage" tabindex="${stage_tabs}"></select></td>
+        <td><input type="text" class="spc_dv" value="0" tabindex="${stat_tabs}"></td>
+        <td class="statexp_column"><input type="text" class="spc_statexp" value="0" tabindex="${stat_tabs}"></td>
+        <td><input type="text" class="spa_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
+        <td><select class="spa_stage stat_stage" tabindex="${stat_tabs}"></select></td>
         <td class="spa_final">--</td>
     </tr>
     <tr>
         <td title="Special Defense">SPD</td>
-        <td>--</td>
-        <td><input type="text" class="spd_stat" value="0" tabindex="${stat_tabs}"></td>
-        <td><select class="spd_stage stat_stage" tabindex="${stage_tabs}"></select></td>
+        <td><input type="text" class="spd_dv" value="0" tabindex="${stat_tabs}" readonly disabled></td>
+        <td class="statexp_column"><input type="text" class="spd_statexp" value="0" tabindex="${stat_tabs}" readonly disabled></td>
+        <td><input type="text" class="spd_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
+        <td><select class="spd_stage stat_stage" tabindex="${stat_tabs}"></select></td>
         <td class="spd_final">--</td>
     </tr>
     <tr>
         <td title="Speed">SPE</td>
-        <td><input type="text" class="spe_dv" value="0" tabindex="${dv_tabs}"></td>
-        <td><input type="text" class="spe_stat" value="0" tabindex="${stat_tabs}"></td>
-        <td><select class="spe_stage stat_stage" tabindex="${stage_tabs}"></select></td>
+        <td><input type="text" class="spe_dv" value="0" tabindex="${stat_tabs}"></td>
+        <td class="statexp_column"><input type="text" class="spe_statexp" value="0" tabindex="${stat_tabs}"></td>
+        <td><input type="text" class="spe_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
+        <td><select class="spe_stage stat_stage" tabindex="${stat_tabs}"></select></td>
         <td class="spe_final">--</td>
     </tr>
     </table>
@@ -498,7 +542,7 @@ function set_up_widgets() {
         <div class="other_stat_inner"><span class="label">Type 1</span><select class="type_primary typing" tabindex="${misc_tabs}"></select></div>
         <div class="other_stat_inner"><span class="label">Type 2</span><select class="type_secondary typing" tabindex="${misc_tabs}"></select></div>
         <div class="other_stat_inner"><span class="label">Status</span><select class="status" tabindex="${misc_tabs}"></select></div>
-        <div class="other_stat_inner">&nbsp;</div>
+        <div class="other_stat_inner"><span class="label">Manual Stat Input</span><div class="checkbox_filler"><input type="checkbox" class="manual_stat_input" /></div></div>
     </div>
     <div class="other_stats">
         <div class="other_stat_inner"><span class="label">Move #1</span><select class="move_1 move" tabindex="${misc_tabs}"></select></div>
@@ -591,6 +635,10 @@ function set_up_widgets() {
 `
     }
 
+    for(const input of document.querySelectorAll(".manual_stat_input")) {
+        input.addEventListener("input", () => update_manual_stat_input())
+    }
+
     for(const input of document.querySelectorAll("input")) {
         input.addEventListener("input", recalculate)
     }
@@ -615,20 +663,20 @@ function set_up_widgets() {
         species.addEventListener("input", () => { update_typings(false); recalculate() })
     }
 
+    update_manual_stat_input()
+
+    document.querySelector(`${get_stats_box(true)} .atk_dv`).value = 15
+    document.querySelector(`${get_stats_box(true)} .def_dv`).value = 15
+    document.querySelector(`${get_stats_box(true)} .spc_dv`).value = 15
+    document.querySelector(`${get_stats_box(true)} .spe_dv`).value = 15
+
     // FIXME: REMOVE THIS ONCE DONE
     // dummy data
-    document.querySelector(`${get_stats_box(true)} .hp_stat`).value = 249
-    document.querySelector(`${get_stats_box(true)} .atk_stat`).value = 169
-    document.querySelector(`${get_stats_box(true)} .def_stat`).value = 148
-    document.querySelector(`${get_stats_box(true)} .spa_stat`).value = 123
-    document.querySelector(`${get_stats_box(true)} .spd_stat`).value = 139
-    document.querySelector(`${get_stats_box(true)} .spe_stat`).value = 179
-    document.querySelector(`${get_stats_box(true)} .level`).value = 71
+    document.querySelector(`${get_stats_box(true)} .level`).value = 5
     document.querySelector(`${get_stats_box(true)} .friendship`).value = 255
-    document.querySelector(`${get_stats_box(true)} .move_1`).value = "RETURN"
-    document.querySelector(`${get_stats_box(true)} .move_2`).value = "SHADOW_BALL"
-    document.querySelector(`${get_stats_box(true)} .move_3`).value = "HEADBUTT"
-    document.querySelector(`${get_stats_box(true)} .move_4`).value = "FIRE_PUNCH"
+    document.querySelector(`${get_stats_box(true)} .move_1`).value = "SCRATCH"
+    document.querySelector(`${get_stats_box(true)} .move_2`).value = "DEFENSE_CURL"
+    document.querySelector(`${get_stats_box(true)} .move_3`).value = "QUICK_ATTACK"
 
     update_typings(true)
     update_typings(false)
@@ -644,6 +692,25 @@ function teams_to_use() {
         default: throw new Error(`Unknown game ${game}`)
     }
 }
+
+function update_manual_stat_input(is_player) {
+    if(is_player === undefined) {
+        update_manual_stat_input(false)
+        update_manual_stat_input(true)
+        return
+    }
+
+    const checked = document.querySelector(`${get_stats_box(is_player)} .manual_stat_input`).checked
+    for(const c of document.querySelectorAll(`${get_stats_box(is_player)} .statexp_column`)) {
+        c.style.display = checked ? "none" : ""
+    }
+    for(const c of document.querySelectorAll(`${get_stats_box(is_player)} .premultiplied_stat`)) {
+        c.readOnly = !checked
+        c.disabled = !checked
+    }
+}
+
+
 
 function refresh_trainer_class_list() {
     let options = ""
@@ -897,6 +964,13 @@ function refresh_trainer_pokemon_data() {
             case "spc_dv": element.value = group.dvs["special"]; break;
             case "spe_dv": element.value = group.dvs["speed"]; break;
 
+            case "hp_statexp": element.value = 0; break;
+            case "atk_statexp": element.value = 0; break;
+            case "def_statexp": element.value = 0; break;
+            case "spc_statexp": element.value = 0; break;
+            case "spd_statexp": element.value = 0; break;
+            case "spe_statexp": element.value = 0; break;
+
             case "species": element.value = selection.species; break;
             case "item": element.value = selection.item; break;
             case "level": element.value = selection.level; break;
@@ -1120,8 +1194,6 @@ function reshow_range() {
             chance_text += `KO in ${single_decimal(infos.stats_opposite.stats.hp / infos.data.rolls.average)} turns on average`
         }
     }
-
-
 
     html += `<h2>Ranges For ${infos.is_player ? "" : "Opponent's"} ${move_name}</h2>`
     html += `<div class="copypasta">Lvl. ${infos.stats.data.level} / ${attack} ${attack_name} ${attack_boost_text} ${species_from_name} ${move_name} vs. ${infos.stats.data.stats.hp} HP / ${defense} ${defense_name} ${defense_boost_text} ${species_to_name}: ${infos.displayed_range}${chance_text}</div>`
