@@ -294,7 +294,7 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         }
 
         move_data_infos[info_index] = {
-            data, move_name, move_data, is_player, stats, stats_opposite, displayed_range, properties
+            data, move_name, move_data, is_player, stats, stats_opposite, displayed_range, properties, move_display_name
         }
     }
 
@@ -1093,7 +1093,7 @@ function reshow_range() {
     const species_to_name = all_pokemon[infos.stats_opposite.data.species].name
 
     let html = `<div id='range_header'><a href='#' onclick='show_range(null)'>(Close)</a></div>`
-    const move_name = infos.move_data.name
+    const move_name = infos.move_display_name
 
     let attack_name
     let defense_name

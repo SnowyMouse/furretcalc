@@ -121,6 +121,12 @@ ul {
     padding: 0;
 }
 
+#instructions ul {
+    list-style-type: circle;
+    margin-left: 16px;
+    padding: 0;
+}
+
 footer ul {
     /* hack to make whitespace from newlines go away */
     font-size: 0;
@@ -337,8 +343,9 @@ header p {
     margin-top: 4px;
 }
 
-#instructions p {
+#instructions p, #instructions li {
     margin-top: 18px;
+    font-size: 14px;
 }
 
 #instructions h2 {
