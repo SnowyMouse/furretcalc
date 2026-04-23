@@ -1,12 +1,14 @@
 "use strict"
 
 import * as furretcalc from "./furretcalc/furretcalc.js"
-import {get_crystal_pokemon, receives_special_defense_boost} from "./furretcalc/furretcalc.js";
+import {Generation, generation_of_game} from "./furretcalc/util.js";
 
 furretcalc.load_furretcalc("./js/furretcalc")
-    .then(() => set_up_widgets())
+    .then(() => set_up_widgets_initial())
 
 let is_calculating = false
+let game = null
+let generation = null
 
 let debounce_timer = null
 function recalculate() {
@@ -20,7 +22,7 @@ function recalculate() {
         clearTimeout(debounce_timer)
     }
 
-    debounce_timer = setTimeout(actually_recalculate, 500)
+    debounce_timer = setTimeout(actually_recalculate, 200)
 }
 
 async function actually_recalculate() {
@@ -55,7 +57,8 @@ async function actually_recalculate() {
             weather: document.getElementById("weather").value,
             max_rolls,
             max_turns,
-            cutoff: target_ko_chance / 100.0
+            cutoff: target_ko_chance / 100.0,
+            game
         }
 
         const warnings = {}
@@ -124,7 +127,7 @@ const DISPLAYED_TURN_COUNT = 4
 let move_data_infos = {}
 
 function format_move_data(base_div, stats, stats_opposite, moves, is_player, suggestions) {
-    const all_moves = furretcalc.get_moves()
+    const all_moves = furretcalc.get_moves(game)
 
     // Returns <0 if b > a; >0 if a > b; 0 if a == b
     function cmp_ttk(a, b) {
@@ -189,7 +192,7 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         const index_int = parseInt(index)
         let move_display_name = move_data.name
         if(move_data.effect === "EFFECT_HIDDEN_POWER") {
-            const { base_power, type } = furretcalc.get_hidden_power_stats(stats.data.dvs)
+            const { base_power, type } = furretcalc.util.get_hidden_power_stats(stats.data.dvs)
             const note = (stats.data.dvs.attack === 0 && stats.data.dvs.defense === 0 && stats.data.dvs.special === 0 && stats.data.dvs.speed === 0) ? "(all-zero IVs (DVs) set)" : ""
             suggestions[`hidden_power_${is_player ? "player": "opponent"}`] = `Calculated ${is_player ? "your" : "opponent's"} Hidden Power as a ${type}-type move with ${base_power} base power${note}.`
 
@@ -324,11 +327,12 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
             case "EFFECT_FURY_CUTTER":
                 suggestions["fury_cutter_wip"] = `Fury Cutter is not yet implemented. Damage displayed is only for the first hit.`
                 break
+            case "EFFECT_PRESENT":
+                suggestions["present_wip"] = `Present is not yet implemented.`
+                break
         }
     }
 }
-
-
 
 function get_stats_box(is_player) {
     return is_player ? "#player_pokemon" : "#opponent_pokemon"
@@ -337,12 +341,12 @@ function get_stats_box(is_player) {
 function recalculate_stats(is_player) {
     const stats = get_stats(is_player)
     const badges = get_badges(is_player)
-    const recalculated = furretcalc.calculate_battle_stats(stats.stats, badges, stats.stages, stats.status)
+    const recalculated = furretcalc.calculate_battle_stats(game, stats.stats, badges, stats.stages, stats.status)
 
     for(const stat of document.querySelectorAll(`${get_stats_box(is_player)} table.stat_input td`)) {
         for(const c of stat.classList) {
             switch(c) {
-                case "hp_final":  stat.innerText = recalculated["hp"]; break;
+                case "hp_final":  stat.innerText = `${recalculated["hp"]} / ${stats.stats["max_hp"]}`; break;
                 case "atk_final": stat.innerText = recalculated["attack"]; break;
                 case "def_final": stat.innerText = recalculated["defense"]; break;
                 case "spa_final": stat.innerText = recalculated["special_attack"]; break;
@@ -364,8 +368,10 @@ function get_badges(is_player) {
         return null
     }
     const badges = []
-    for(let i = 1; i <= 8; i++) {
-        badges.push(document.getElementById(`johto_badge_${i}`).checked)
+    if(generation === Generation.Gen2) {
+        for(let i = 1; i <= 8; i++) {
+            badges.push(document.getElementById(`johto_badge_${i}`).checked)
+        }
     }
     for(let i = 1; i <= 8; i++) {
         badges.push(document.getElementById(`kanto_badge_${i}`).checked)
@@ -385,8 +391,9 @@ function get_stats(is_player) {
         item: null,
         status: null,
         level: null,
-        manual_stat_input: false
+        manual_stat_input: document.getElementById("manual_stat_input").checked
     }
+    let current_hp = ""
     for(const stat of document.querySelectorAll(`${get_stats_box(is_player)} input, ${get_stats_box(is_player)} select`)) {
         for(const c of stat.classList) {
             switch(c) {
@@ -402,6 +409,7 @@ function get_stats(is_player) {
                 case "spc_dv": stats.dvs["special"] = parse_int_clamped(stat.value, 0, 15); break;
                 case "spe_dv": stats.dvs["speed"] = parse_int_clamped(stat.value, 0, 15); break;
 
+                case "hp_statexp": stats.statexp["hp"] = parse_int_clamped(stat.value, 0, 65535); break;
                 case "atk_statexp": stats.statexp["attack"] = parse_int_clamped(stat.value, 0, 65535); break;
                 case "def_statexp": stats.statexp["defense"] = parse_int_clamped(stat.value, 0, 65535); break;
                 case "spc_statexp": stats.statexp["special"] = parse_int_clamped(stat.value, 0, 65535); break;
@@ -425,19 +433,38 @@ function get_stats(is_player) {
                 case "status": stats.status = stat.value; break;
                 case "friendship": stats.friendship = stat.value; break;
                 case "level": stats.level = parse_int_clamped(stat.value, 0, 255); break;
+                case "current_hp": current_hp = stat.value; break;
 
-                case "type_primary": stats.types[0] = furretcalc.Type[stat.value]; break;
-                case "type_secondary": stats.types[1] = furretcalc.Type[stat.value]; break;
-
-                case "manual_stat_input": stats.manual_stat_input = stat.checked; break;
+                case "type_primary": stats.types[0] = furretcalc.util.Type[stat.value]; break;
+                case "type_secondary": stats.types[1] = furretcalc.util.Type[stat.value]; break;
             }
         }
     }
 
     if(!stats.manual_stat_input) {
-        const base_stats = furretcalc.get_crystal_pokemon()[stats.species].base_stats
-        stats.stats = furretcalc.calculate_monster_stats(stats.level, base_stats, stats.dvs, stats.statexp)
+        const base_stats = furretcalc.get_pokemon(game)[stats.species].base_stats
+        stats.stats = furretcalc.util.calculate_monster_stats(stats.level, base_stats, stats.dvs, stats.statexp)
     }
+
+    if(current_hp === "") {
+        current_hp = "100%"
+    }
+
+    stats.stats.max_hp = stats.stats.hp
+
+    if(current_hp.endsWith("%")) {
+        const ratio = parse_float_clamped(current_hp.split("%")[0], 0, 100) / 100.0
+        stats.stats.hp = Math.round(stats.stats.max_hp * ratio)
+    }
+    else if(current_hp.endsWith("px")) {
+        const ratio = parse_int_clamped(current_hp.split("px")[0], 0, 48) / 48.0
+        stats.stats.hp = Math.round(stats.stats.max_hp * ratio)
+    }
+    else {
+        stats.stats.hp = parse_int_clamped(current_hp, 0, stats.stats.max_hp)
+    }
+
+    stats.stats.hp = Math.max(stats.stats.hp, 1)
 
     return stats
 }
@@ -454,10 +481,10 @@ function quickly_update_stats(is_player) {
     // TODO: make updating these faster
     document.querySelector(`${get_stats_box(is_player)} .spd_dv`).value = stats.dvs["special"]
     document.querySelector(`${get_stats_box(is_player)} .spd_statexp`).value = stats.statexp["special"]
-    document.querySelector(`${get_stats_box(is_player)} .hp_dv`).value = furretcalc.calculate_hp_dv(stats.dvs)
+    document.querySelector(`${get_stats_box(is_player)} .hp_dv`).value = furretcalc.util.calculate_hp_dv(stats.dvs)
 
     if(!stats.manual_stat_input) {
-        document.querySelector(`${get_stats_box(is_player)} .hp_stat`).value = stats.stats.hp
+        document.querySelector(`${get_stats_box(is_player)} .hp_stat`).value = stats.stats.max_hp
         document.querySelector(`${get_stats_box(is_player)} .atk_stat`).value = stats.stats.attack
         document.querySelector(`${get_stats_box(is_player)} .def_stat`).value = stats.stats.defense
         document.querySelector(`${get_stats_box(is_player)} .spa_stat`).value = stats.stats.special_attack
@@ -466,7 +493,27 @@ function quickly_update_stats(is_player) {
     }
 }
 
+function set_up_widgets_initial() {
+    document.getElementById("game").innerHTML = `
+<optgroup label="Generation 1">
+<option value="${furretcalc.util.Game.RedBlue}" disabled>Pokémon Red & Blue</option>
+<option value="${furretcalc.util.Game.Yellow}" disabled>Pokémon Yellow Version: Special Pikachu Edition</option>
+</optgroup>
+<optgroup label="Generation 2">
+<option value="${furretcalc.util.Game.GoldSilver}">Pokémon Gold & Silver</option>
+<option value="${furretcalc.util.Game.Crystal}" selected>Pokémon Crystal Version</option>
+</optgroup>
+`
+    document.getElementById("game").addEventListener("input", () => set_up_widgets())
+
+    set_up_widgets()
+
+}
+
 function set_up_widgets() {
+    game = get_current_game()
+    generation = generation_of_game(game)
+
     let tabindex = 1
 
     // Add in stat placeholder stuff
@@ -491,7 +538,7 @@ function set_up_widgets() {
         <td class="statexp_column"><input type="text" class="hp_statexp" value="0" tabindex="${stat_tabs}"></td>
         <td><input type="text" class="hp_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
         <td>--</td>
-        <td class="hp_final">--</td>
+        <td class="hp_final final_stat">--</td>
     </tr>
     <tr>
         <td title="Attack">ATK</td>
@@ -499,50 +546,52 @@ function set_up_widgets() {
         <td class="statexp_column"><input type="text" class="atk_statexp" value="0" tabindex="${stat_tabs}"></td>
         <td><input type="text" class="atk_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
         <td><select class="atk_stage stat_stage" tabindex="${stat_tabs}"></select></td>
-        <td class="atk_final">--</td>
+        <td class="atk_final final_stat">--</td>
     </tr>
     <tr>
         <td title="Defense">DEF</td>
         <td><input type="text" class="def_dv" value="0" tabindex="${stat_tabs}"></td>
         <td class="statexp_column"><input type="text" class="def_statexp" value="0" tabindex="${stat_tabs}"></td>
-        <td><input type="text" class="def_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"</td>
+        <td><input type="text" class="def_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
         <td><select class="def_stage stat_stage" tabindex="${stat_tabs}"></select></td>
-        <td class="def_final">--</td>
+        <td class="def_final final_stat">--</td>
     </tr>
     <tr>
-        <td title="Special Attack">SPA</td>
+        ${generation === Generation.Gen1 ? `<td title="Special (Special Attack and Special Defense)">SPC</td>` : `<td title="Special Attack">SPA</td>`}
         <td><input type="text" class="spc_dv" value="0" tabindex="${stat_tabs}"></td>
         <td class="statexp_column"><input type="text" class="spc_statexp" value="0" tabindex="${stat_tabs}"></td>
         <td><input type="text" class="spa_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
         <td><select class="spa_stage stat_stage" tabindex="${stat_tabs}"></select></td>
-        <td class="spa_final">--</td>
+        <td class="spa_final final_stat">--</td>
     </tr>
+    ${generation === Generation.Gen1 ? `` : `
     <tr>
         <td title="Special Defense">SPD</td>
         <td><input type="text" class="spd_dv" value="0" tabindex="${stat_tabs}" readonly disabled></td>
         <td class="statexp_column"><input type="text" class="spd_statexp" value="0" tabindex="${stat_tabs}" readonly disabled></td>
         <td><input type="text" class="spd_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
         <td><select class="spd_stage stat_stage" tabindex="${stat_tabs}"></select></td>
-        <td class="spd_final">--</td>
+        <td class="spd_final final_stat">--</td>
     </tr>
+    `}
     <tr>
         <td title="Speed">SPE</td>
         <td><input type="text" class="spe_dv" value="0" tabindex="${stat_tabs}"></td>
         <td class="statexp_column"><input type="text" class="spe_statexp" value="0" tabindex="${stat_tabs}"></td>
         <td><input type="text" class="spe_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
         <td><select class="spe_stage stat_stage" tabindex="${stat_tabs}"></select></td>
-        <td class="spe_final">--</td>
+        <td class="spe_final final_stat">--</td>
     </tr>
     </table>
     <div class="other_stats">
         <div class="other_stat_inner"><span class="label">Species</span><select class="species" tabindex="${misc_tabs}"></select></div>
-        <div class="other_stat_inner"><span class="label">Item</span><select class="item" tabindex="${misc_tabs}"></select></div>
+        ${generation !== Generation.Gen1 ? `<div class="other_stat_inner"><span class="label">Item</span><select class="item" tabindex="${misc_tabs}"></select></div>` : ``}
     </div>
     <div class="other_stats">
         <div class="other_stat_inner"><span class="label">Type 1</span><select class="type_primary typing" tabindex="${misc_tabs}"></select></div>
         <div class="other_stat_inner"><span class="label">Type 2</span><select class="type_secondary typing" tabindex="${misc_tabs}"></select></div>
         <div class="other_stat_inner"><span class="label">Status</span><select class="status" tabindex="${misc_tabs}"></select></div>
-        <div class="other_stat_inner"><span class="label">Manual Stat Input</span><div class="checkbox_filler"><input type="checkbox" class="manual_stat_input" /></div></div>
+        <div class="other_stat_inner"><span class="label">Current HP</span><input type="text" class="current_hp" placeholder="100%" /></div>
     </div>
     <div class="other_stats">
         <div class="other_stat_inner"><span class="label">Move #1</span><select class="move_1 move" tabindex="${misc_tabs}"></select></div>
@@ -560,6 +609,41 @@ function set_up_widgets() {
 
         tabindex += 1000
     }
+
+    document.getElementById("badges_box_inner").innerHTML = `
+${generation === Generation.Gen2 ? `
+<div id="johto_badges" class="badge_box">
+<ul>
+<li><input type="checkbox" id="johto_badge_1" tabindex="100" /><label for="johto_badge_1">Falkner</label></li>
+<li><input type="checkbox" id="johto_badge_2" tabindex="100" /><label for="johto_badge_2">Bugsy</label></li>
+<li><input type="checkbox" id="johto_badge_3" tabindex="100" /><label for="johto_badge_3">Whitney</label></li>
+<li><input type="checkbox" id="johto_badge_4" tabindex="100" /><label for="johto_badge_4">Morty</label></li>
+<li><input type="checkbox" id="johto_badge_5" tabindex="100" /><label for="johto_badge_5">Chuck</label></li>
+<li><input type="checkbox" id="johto_badge_6" tabindex="100" /><label for="johto_badge_6">Jasmine</label></li>
+<li><input type="checkbox" id="johto_badge_7" tabindex="100" /><label for="johto_badge_7">Pryce</label></li>
+<li><input type="checkbox" id="johto_badge_8" tabindex="100" /><label for="johto_badge_8">Clair</label></li>
+</ul>
+</div>
+` : ``}
+<div id="kanto_badges" class="badge_box">
+<ul>
+<li><input type="checkbox" id="kanto_badge_1" tabindex="100" /><label for="kanto_badge_1">Brock</label></li>
+<li><input type="checkbox" id="kanto_badge_2" tabindex="100" /><label for="kanto_badge_2">Misty</label></li>
+<li><input type="checkbox" id="kanto_badge_3" tabindex="100" /><label for="kanto_badge_3">Lt. Surge</label></li>
+<li><input type="checkbox" id="kanto_badge_4" tabindex="100" /><label for="kanto_badge_4">Erika</label></li>
+<li><input type="checkbox" id="kanto_badge_5" tabindex="100" /><label for="kanto_badge_5">Janine</label></li>
+<li><input type="checkbox" id="kanto_badge_6" tabindex="100" /><label for="kanto_badge_6">Sabrina</label></li>
+<li><input type="checkbox" id="kanto_badge_7" tabindex="100" /><label for="kanto_badge_7">Blaine</label></li>
+<li><input type="checkbox" id="kanto_badge_8" tabindex="100" /><label for="kanto_badge_8">${generation === Generation.Gen2 ? "Blue" : "Giovanni"}</label></li>
+</ul>
+</div>
+<div class="control_box">
+<ul>
+<li><button onclick="select_all_badges()" tabindex="100">Select all</button></li>
+${generation === Generation.Gen2 ? `<li><button onclick="select_johto_badges()" tabindex="100">Select Johto</button></li>` : ``}
+<li><button onclick="clear_all_badges()" tabindex="100">Clear all</button></li>
+</ul>
+</div>`
 
     // Fill out all stat stages
     let stat_stage_html = ""
@@ -581,7 +665,7 @@ function set_up_widgets() {
     }
 
     let typing_html = "<option selected>None</option>"
-    for(const [key, value] of Object.entries(furretcalc.Type)) {
+    for(const [key, value] of Object.entries(furretcalc.util.Type)) {
         typing_html += `<option value="${key}">${value}</option>`
     }
     for(const typing of document.getElementsByClassName("typing")) {
@@ -590,7 +674,7 @@ function set_up_widgets() {
 
     // Fill out the species!!! (should be the same for both crystal and gold)
     let species_html = ""
-    for(const [name, entry] of Object.entries(furretcalc.get_crystal_pokemon()).sort((a, b) => a[1].name.localeCompare(b[1].name))) {
+    for(const [name, entry] of Object.entries(furretcalc.get_pokemon(game)).sort((a, b) => a[1].name.localeCompare(b[1].name))) {
         const is_default = name === "FURRET" ? " selected" : ""
         species_html += `<option value="${name}"${is_default}>${entry.name}</option>`
     }
@@ -599,7 +683,7 @@ function set_up_widgets() {
     }
 
     // Fill out all moves
-    const all_moves = furretcalc.get_moves()
+    const all_moves = furretcalc.get_moves(game)
     let all_move_html = ""
     for(const [k,v] of Object.entries(all_moves).toSorted()) {
         if(k === "NO_MOVE") {
@@ -635,16 +719,14 @@ function set_up_widgets() {
 `
     }
 
-    for(const input of document.querySelectorAll(".manual_stat_input")) {
-        input.addEventListener("input", () => update_manual_stat_input())
-    }
+    document.getElementById("manual_stat_input").addEventListener("input", () => update_manual_stat_input())
 
     for(const input of document.querySelectorAll("input")) {
         input.addEventListener("input", recalculate)
     }
 
     for(const input of document.querySelectorAll("select")) {
-        if(input.id === "ai_preset_trainer" || input.id === "ai_preset_monster" || input.id === "ai_preset_game" || input.classList.contains("species")) {
+        if(input.id === "ai_preset_trainer" || input.id === "ai_preset_monster" || input.id === "game" || input.classList.contains("species")) {
             continue
         }
         input.addEventListener("input", recalculate)
@@ -653,7 +735,6 @@ function set_up_widgets() {
     document.getElementById("ai_preset_trainer").addEventListener("input", () => refresh_trainer_pokemon_selection())
     document.getElementById("ai_preset_trainer_class").addEventListener("input", () => refresh_trainer_list())
     document.getElementById("ai_preset_monster").addEventListener("input", () => refresh_trainer_pokemon_data())
-    document.getElementById("ai_preset_game").addEventListener("input", () => refresh_trainer_class_list())
 
     for(const species of document.querySelectorAll(`${get_stats_box(true)} .species`)) {
         species.addEventListener("input", () => { update_typings(true); recalculate() })
@@ -662,8 +743,6 @@ function set_up_widgets() {
     for(const species of document.querySelectorAll(`${get_stats_box(false)} .species`)) {
         species.addEventListener("input", () => { update_typings(false); recalculate() })
     }
-
-    update_manual_stat_input()
 
     document.querySelector(`${get_stats_box(true)} .atk_dv`).value = 15
     document.querySelector(`${get_stats_box(true)} .def_dv`).value = 15
@@ -681,16 +760,8 @@ function set_up_widgets() {
     update_typings(true)
     update_typings(false)
 
-    refresh_trainer_class_list()
-}
-
-function teams_to_use() {
-    const game = document.getElementById("ai_preset_game").value
-    switch(game) {
-        case "crystal": return furretcalc.get_crystal_parties();
-        case "gold": return furretcalc.get_gold_parties();
-        default: throw new Error(`Unknown game ${game}`)
-    }
+    refresh_trainer_class_list(game)
+    update_manual_stat_input()
 }
 
 function update_manual_stat_input(is_player) {
@@ -700,7 +771,7 @@ function update_manual_stat_input(is_player) {
         return
     }
 
-    const checked = document.querySelector(`${get_stats_box(is_player)} .manual_stat_input`).checked
+    const checked = document.getElementById(`manual_stat_input`).checked
     for(const c of document.querySelectorAll(`${get_stats_box(is_player)} .statexp_column`)) {
         c.style.display = checked ? "none" : ""
     }
@@ -715,7 +786,7 @@ function update_manual_stat_input(is_player) {
 function refresh_trainer_class_list() {
     let options = ""
 
-    const t = teams_to_use()
+    const t = furretcalc.get_parties(game)
     const trainer_types = []
 
     for(const { name } of Object.values(t)) {
@@ -773,11 +844,11 @@ const TOTODILE_LINE = Object.freeze(["TOTODILE", "CROCONAW", "FERALIGATR"])
 
 function refresh_trainer_list() {
     const search = document.getElementById("ai_preset_trainer_class").value
-    const pokemon = get_crystal_pokemon()
+    const pokemon = furretcalc.get_pokemon(game)
     
     let options = ""
 
-    const t = teams_to_use()
+    const t = furretcalc.get_parties(game)
     const all = {}
 
     for(const [trainer_group, trainer_class] of Object.entries(t)) {
@@ -905,7 +976,7 @@ function refresh_trainer_list() {
 function get_selected_team() {
     const value = document.getElementById("ai_preset_trainer").value
     const [group_name, index_str] = value.split("-")
-    const teams = teams_to_use()
+    const teams = furretcalc.get_parties(game)
     const group = teams[group_name]
     if(group == null) {
         throw new Error(`Can't find group ${group_name}`)
@@ -924,7 +995,7 @@ function refresh_trainer_pokemon_selection() {
         throw new Error("No team selected!")
     }
     
-    const pokemon = furretcalc.get_crystal_pokemon()
+    const pokemon = furretcalc.get_pokemon(game)
     let options = ""
     for(const [index, member] of Object.entries(team.party)) {
         options += `<option value=\"${index}\">${parseInt(index) + 1}. ${pokemon[member.species].name} (Lv.${member.level})`
@@ -990,13 +1061,19 @@ function refresh_trainer_pokemon_data() {
 
 function clear_all_badges() {
     for(let i = 1; i <= 8; i++) {
-        document.getElementById(`johto_badge_${i}`).checked = false
+        if(generation === Generation.Gen2) {
+            document.getElementById(`johto_badge_${i}`).checked = false
+        }
         document.getElementById(`kanto_badge_${i}`).checked = false
     }
     recalculate()
 }
 
 function select_johto_badges() {
+    if(generation !== Generation.Gen2) {
+        return
+    }
+
     for(let i = 1; i <= 8; i++) {
         document.getElementById(`johto_badge_${i}`).checked = true
     }
@@ -1014,7 +1091,7 @@ function select_all_badges() {
 
 function update_typings(is_player) {
     const species = document.querySelector(`${get_stats_box(is_player)} .species`).value
-    const entry = furretcalc.get_crystal_pokemon()[species]
+    const entry = furretcalc.get_pokemon(game)[species]
 
     document.querySelector(`${get_stats_box(is_player)} .type_primary`).value = entry.types[0]
     document.querySelector(`${get_stats_box(is_player)} .type_secondary`).value = entry.types[1] ?? "None"
@@ -1087,7 +1164,7 @@ function reshow_range() {
         return
     }
 
-    const all_pokemon = get_crystal_pokemon()
+    const all_pokemon = furretcalc.get_pokemon(game)
 
     const species_from_name = all_pokemon[infos.stats.data.species].name
     const species_to_name = all_pokemon[infos.stats_opposite.data.species].name
@@ -1103,6 +1180,8 @@ function reshow_range() {
     let attack_boost_info = []
     let defense_boost_info = []
 
+    const badge_boosts = furretcalc.get_stat_badge_boost_badges(game)
+
     if(infos.data.is_physical) {
         attack_name = "ATK"
         defense_name = "DEF"
@@ -1111,8 +1190,8 @@ function reshow_range() {
         attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.attack))
         defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.defense))
 
-        const attack_boost = infos.stats.badges?.[furretcalc.StatBadgeBoostIndexCrystal.Attack] ?? false
-        const defense_boost = infos.stats_opposite.badges?.[furretcalc.StatBadgeBoostIndexCrystal.Defense] ?? false
+        const attack_boost = infos.stats.badges?.[badge_boosts.Attack] ?? false
+        const defense_boost = infos.stats_opposite.badges?.[badge_boosts.Defense] ?? false
 
         if(attack_boost) {
             attack_boost_info.push("+ATK")
@@ -1129,8 +1208,8 @@ function reshow_range() {
         attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.special_attack))
         defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.special_defense))
 
-        const attack_boost = infos.stats.badges?.[furretcalc.StatBadgeBoostIndexCrystal.Special] ?? false
-        const defense_boost = (infos.stats_opposite.badges?.[furretcalc.StatBadgeBoostIndexCrystal.Special] ?? false) && receives_special_defense_boost(infos.stats_opposite.data.stats.special_attack)
+        const attack_boost = infos.stats.badges?.[badge_boosts.Special] ?? false
+        const defense_boost = (infos.stats_opposite.badges?.[badge_boosts.Special] ?? false) && furretcalc.receives_special_defense_boost(infos.stats_opposite.data.stats.special_attack)
 
         if(attack_boost) {
             attack_boost_info.push("+SPA")
@@ -1140,7 +1219,8 @@ function reshow_range() {
         }
     }
 
-    if(infos.stats.badges?.[furretcalc.TypeBadgeBoosts[infos.data.move_data.type]]) {
+    const badge_boost_index = furretcalc.get_type_badge_boost_badges(game)[infos.data.move_data.type]
+    if(badge_boost_index != null && infos.stats.badges?.[badge_boost_index]) {
         attack_boost_info.push(`+${infos.data.move_data.type}`)
     }
 
@@ -1226,4 +1306,8 @@ function single_decimal(number) {
 
 function no_decimal(number) {
     return (Math.floor(Math.abs(number)) * (number < 0 ? -1 : 1)).toFixed(0)
+}
+
+function get_current_game() {
+    return document.getElementById("game").value
 }

@@ -79,13 +79,18 @@ footer, header {
     padding: 8px;
 }
 
+#badges_box_inner {
+    text-align: center;
+    display: flex;
+    margin-top: 8px;
+    justify-content: center;
+    gap: 50px;
+    width: 100%;
+}
+
 #badges_box_outer .badge_box {
     font-size: 14px;
-    width: 120px;
-    display: inline-block;
     text-align: left;
-    margin-top: 8px;
-    margin-bottom: 8px;
 }
 
 #badges_box_outer .badge_box ul li:not(:first-child) {
@@ -93,16 +98,19 @@ footer, header {
 }
 
 #badges_box_outer .control_box {
-    display: inline-block;
-    position: absolute;
     text-align: left;
-    margin-top: 8px;
-    margin-bottom: 8px;
+    display: block;
+    height: 100%;
+}
+
+#badges_box_outer .control_box li {
+    text-align: center;
 }
 
 #badges_box_outer .control_box button {
-    display: block;
+    display: inline-block;
     margin-bottom: 4px;
+    width: 100%;
 }
 
 #badges_box_outer label {
@@ -165,6 +173,10 @@ table.stat_input tr th, table.stat_input tr td {
 
 table.stat_input tr td, table.stat_input tr th {
     font-size: 14px;
+}
+
+table.stat_input tr td, table.stat_input tr th .final_stat {
+    font-size: 12px;
 }
 
 input[type="text"], select, button, input[type="checkbox"] {

@@ -1,50 +1,79 @@
 "use strict"
 
-const NO_MOVE = "NO_MOVE"
+import * as gen2 from "./gen2/gen2.js"
 
-let moves_json = null
+export * as util from "./util.js"
 
-let crystal_parties_json = null
-let goldsilver_parties_json = null
-
-let crystal_pokemon_json = null
-let goldsilver_pokemon_json = null
+import {
+    calculate_stat,
+    damage_category_of_type,
+    DamageCategory, Game,
+    Generation,
+    generation_of_game,
+    int_divide,
+    unreachable,
+    NO_MOVE,
+    Weather,
+    calculate_damage_subtotal,
+    get_hidden_power_stats,
+    MODIFIER_FOR_STAT
+} from "./util.js";
 
 let loaded = null
 
-export function get_moves() {
-    if(moves_json == null) {
-        throw new Error("Not loaded!")
+export function get_moves(game) {
+    switch(generation_of_game(game)) {
+        case Generation.Gen1:
+            throw new Error("TODO: gen1 moves")
+        case Generation.Gen2:
+            return gen2.get_moves()
+        default:
+            unreachable()
     }
-    return moves_json
 }
 
-export function get_crystal_pokemon() {
-    if(crystal_pokemon_json == null) {
-        throw new Error("Not loaded!")
+export function get_pokemon(game) {
+    switch(game) {
+        case Game.GoldSilver:
+            return gen2.get_gold_pokemon()
+        case Game.Crystal:
+            return gen2.get_crystal_pokemon()
+        default:
+            throw new Error(`get_pokemon - unknown game ${game}`)
     }
-    return crystal_pokemon_json
 }
 
-export function get_gold_pokemon() {
-    if(goldsilver_pokemon_json == null) {
-        throw new Error("Not loaded!")
+export function get_parties(game) {
+    switch(game) {
+        case Game.GoldSilver:
+            return gen2.get_gold_parties()
+        case Game.Crystal:
+            return gen2.get_crystal_parties()
+        default:
+            throw new Error(`get_parties - unknown game ${game}`)
     }
-    return goldsilver_pokemon_json
 }
 
-export function get_crystal_parties() {
-    if(crystal_parties_json == null) {
-        throw new Error("Not loaded!")
+export function get_stat_badge_boost_badges(game) {
+    switch(generation_of_game(game)) {
+        case Generation.Gen1:
+            throw new Error("TODO: gen 1 badge boosts")
+        case Generation.Gen2:
+            return gen2.StatBadgeBoostIndex
+        default:
+            unreachable()
     }
-    return crystal_parties_json
 }
 
-export function get_gold_parties() {
-    if(goldsilver_parties_json == null) {
-        throw new Error("Not loaded!")
+export function get_type_badge_boost_badges(game) {
+    switch(generation_of_game(game)) {
+        case Generation.Gen1:
+            return {}
+        case Generation.Gen2:
+            return gen2.TypeBadgeBoostIndex
+        default:
+            unreachable()
     }
-    return goldsilver_parties_json
 }
 
 export async function load_furretcalc(base_url) {
@@ -52,183 +81,9 @@ export async function load_furretcalc(base_url) {
         return loaded
     }
 
-    loaded = new Promise((resolve, reject) => {
-        async function load_moves() {
-            try {
-                const moves = await (await fetch(`${base_url}/data/moves.json`)).text()
-                const moves_json_parsed = JSON.parse(moves)
-                for(const [k,v] of Object.entries(moves_json_parsed)) {
-                    v.accuracy_out_of_256 = int_divide(v.accuracy * 255, 100)
-                    v.effect_chance_out_of_256 = int_divide(v.effect_chance * 255, 100)
-                    moves_json_parsed[k] = Object.freeze(v)
-                }
-
-                crystal_pokemon_json = await get_pokemon(`${base_url}/data/pokemon_crystal.json`)
-                goldsilver_pokemon_json = await get_pokemon(`${base_url}/data/pokemon_goldsilver.json`)
-
-                crystal_parties_json = await get_parties(`${base_url}/data/parties_crystal.json`, crystal_pokemon_json)
-                goldsilver_parties_json = await get_parties(`${base_url}/data/parties_goldsilver.json`, goldsilver_pokemon_json)
-
-                moves_json = Object.freeze(moves_json_parsed)
-                resolve()
-            }
-            catch (e) {
-                reject(e)
-            }
-        }
-        load_moves()
-    })
+    loaded = gen2.load_gen2(base_url)
 
     return loaded
-}
-
-async function get_pokemon(url) {
-    const pokemon_data = JSON.parse(await (await fetch(url)).text())
-
-    for(const [k,v] of Object.entries(pokemon_data)) {
-        if(v.types[1] === v.types[0]) {
-            v.types = Object.freeze([v.types[0]])
-        }
-        else {
-            v.types = Object.freeze(v.types)
-        }
-
-        const [hp, atk, def, spe, spa, spd] = v.base_stats
-
-        v.base_stats = Object.freeze({
-            "hp": hp,
-            "attack": atk,
-            "defense": def,
-            "special_attack": spa,
-            "special_defense": spd,
-            "speed": spe
-        })
-
-        for(const [mi, m] of Object.entries(v.level_up_moves)) {
-            v.level_up_moves[mi] = Object.freeze(m)
-        }
-
-        v.level_up_moves = Object.freeze(v.level_up_moves)
-
-        pokemon_data[k] = Object.freeze(v)
-    }
-
-    return Object.freeze(pokemon_data)
-}
-
-async function get_parties(url, pokemon) {
-    const parties_data = JSON.parse(await (await fetch(url)).text())
-
-    for(const [k,v] of Object.entries(parties_data)) {
-        if(v.trainers.length === 0) {
-            delete parties_data[k]
-        }
-    }
-
-    for(const [k,v] of Object.entries(parties_data)) {
-        const [atk_dv, def_dev, spd_dv, spc_dv] = v.dvs
-
-        v.dvs = {
-            attack: atk_dv,
-            defense: def_dev,
-            special: spc_dv,
-            speed: spd_dv
-        }
-
-        v.dvs.hp = calculate_hp_dv(v.dvs)
-        v.dvs = Object.freeze(v.dvs)
-
-        for(const [tk,trainer] of Object.entries(v.trainers)) {
-            for(const [pk,monster] of Object.entries(trainer.party)) {
-                const matched_monster = pokemon[monster.species]
-                if(matched_monster == null) {
-                    throw new Error(`No species ${monster.species} found!`)
-                }
-
-                if(monster.moves == null) {
-                    const current_moveset = []
-
-                    for(const l of matched_monster.level_up_moves) {
-                        if(current_moveset.includes(l.move)) {
-                            continue
-                        }
-                        if(l.level <= monster.level) {
-                            current_moveset.push(l.move)
-                        }
-                    }
-
-                    while(current_moveset.length < 4) {
-                        current_moveset.push(NO_MOVE)
-                    }
-
-                    if(current_moveset.length > 4) {
-                        current_moveset.splice(0, current_moveset.length - 4)
-                    }
-
-                    if(current_moveset[0] === NO_MOVE) {
-                        throw new Error(`Trainer ${trainer.name} is missing a move for #${pk}!`)
-                    }
-
-                    monster.moves = Object.freeze(current_moveset)
-                }
-                else {
-                    monster.moves = Object.freeze(monster.moves)
-                }
-
-                monster.stats = calculate_monster_stats(monster.level, matched_monster.base_stats, v.dvs, null)
-
-                trainer.party[pk] = Object.freeze(monster)
-            }
-
-            v.trainers[tk] = Object.freeze(trainer)
-        }
-
-        parties_data[k] = Object.freeze(v)
-    }
-
-    return Object.freeze(parties_data)
-}
-
-export function calculate_monster_stats(level, base_stats, dvs, statexp = null) {
-    const hp_dv = calculate_hp_dv(dvs)
-    return Object.freeze({
-        "hp": calculate_hp_stat(level, base_stats["hp"], hp_dv, statexp?.hp ?? 0),
-        "attack": calculate_non_hp_stat(level, base_stats["attack"], dvs.attack, statexp?.attack ?? 0),
-        "defense": calculate_non_hp_stat(level, base_stats["defense"], dvs.defense, statexp?.defense ?? 0),
-        "special_attack": calculate_non_hp_stat(level, base_stats["special_attack"], dvs.special, statexp?.special ?? 0),
-        "special_defense": calculate_non_hp_stat(level, base_stats["special_defense"], dvs.special, statexp?.special ?? 0),
-        "speed": calculate_non_hp_stat(level, base_stats["speed"], dvs.speed, statexp?.speed ?? 0)
-    })
-}
-
-function calculate_hp_stat(level, base, dv, statexp) {
-    return int_divide(((base + dv) * 2 + calculate_statexp_part(statexp)) * level, 100) + 10 + level
-}
-
-function calculate_non_hp_stat(level, base, dv, statexp) {
-    return int_divide(((base + dv) * 2 + calculate_statexp_part(statexp)) * level, 100) + 5
-}
-
-function calculate_statexp_part(statexp) {
-    const sqrt = Math.ceil(Math.sqrt(statexp))
-    return Math.floor(Math.min(sqrt, 255) / 4)
-}
-
-export function calculate_hp_dv(dvs) {
-    let hp = 0
-    if((dvs.attack & 1) === 1) {
-        hp += 8
-    }
-    if((dvs.defense & 1) === 1) {
-        hp += 4
-    }
-    if((dvs.speed & 1) === 1) {
-        hp += 2
-    }
-    if((dvs.special & 1) === 1) {
-        hp += 1
-    }
-    return hp
 }
 
 export async function wait_loaded() {
@@ -238,18 +93,12 @@ export async function wait_loaded() {
     await loaded
 }
 
-export const StatBadgeBoostIndexCrystal = Object.freeze({
-    Attack: 0,
-    Defense: 5,
-    Special: 6,
-    Speed: 2
-})
-
 export function receives_special_defense_boost(unboosted_special_attack) {
     return (unboosted_special_attack >= 206 && unboosted_special_attack <= 432) || (unboosted_special_attack >= 661) // gen 2 is great
 }
 
-export function calculate_battle_stats(out_of_battle_stats, badges, stages, status) {
+export function calculate_battle_stats(game, out_of_battle_stats, badges, stages, status) {
+    const badge_boosts = get_stat_badge_boost_badges(game)
     let { hp, attack, defense, special_attack, special_defense, speed } = out_of_battle_stats
     
     switch(status) {
@@ -257,110 +106,20 @@ export function calculate_battle_stats(out_of_battle_stats, badges, stages, stat
         case "paralyzed": speed = int_divide(speed, 4); break;
     }
 
-    const attack_boost = badges?.[StatBadgeBoostIndexCrystal.Attack] ?? false
-    const defense_boost = badges?.[StatBadgeBoostIndexCrystal.Defense] ?? false
-    const special_attack_boost = badges?.[StatBadgeBoostIndexCrystal.Special] ?? false
+    const attack_boost = badges?.[badge_boosts.Attack] ?? false
+    const defense_boost = badges?.[badge_boosts.Defense] ?? false
+    const special_attack_boost = badges?.[badge_boosts.Special] ?? false
     const special_defense_boost = special_attack_boost && receives_special_defense_boost(special_attack)
-    const speed_boost = badges?.[StatBadgeBoostIndexCrystal.Speed] ?? false
+    const speed_boost = badges?.[badge_boosts.Speed] ?? false
 
     return {
-        hp: hp < 1 ? 1 : hp,
+        hp: Math.max(hp, 1),
         attack: calculate_stat(attack, attack_boost, stages.attack),
         defense: calculate_stat(defense, defense_boost, stages.defense),
         special_attack: calculate_stat(special_attack, special_attack_boost, stages.special_attack),
         special_defense: calculate_stat(special_defense, special_defense_boost, stages.special_defense),
         speed: calculate_stat(speed, speed_boost, stages.speed),
     }
-}
-
-export const DamageCategory = Object.freeze({
-    PHYSICAL: "Physical",
-    SPECIAL: "Special"
-})
-
-export const Type = Object.freeze({
-	NORMAL: "Normal",
-	FIGHTING: "Fighting",
-	FLYING: "Flying",
-	POISON: "Poison",
-	GROUND: "Ground",
-	ROCK: "Rock",
-	BIRD: "Bird",
-	BUG: "Bug",
-	GHOST: "Ghost",
-	STEEL: "Steel",
-	CURSE: "???",
-	FIRE: "Fire",
-	WATER: "Water",
-	GRASS: "Grass",
-	ELECTRIC: "Electric",
-	PSYCHIC: "Psychic",
-	ICE: "Ice",
-	DRAGON: "Dragon",
-	DARK: "Dark",
-})
-
-export const Weather = Object.freeze({
-    SUN: "sun",
-    RAIN: "rain"
-})
-
-const ALL_TYPES = Object.values(Type);
-const FIRST_SPECIAL_TYPE_INDEX = ALL_TYPES.indexOf(Type.FIRE)
-
-/**
- * Get the damage category of the given type.
- * @param {Type} type 
- * @returns {DamageCategory}
- */
-export function damage_category_of_type(type) {
-    return ALL_TYPES.indexOf(type) < FIRST_SPECIAL_TYPE_INDEX ? DamageCategory.PHYSICAL : DamageCategory.SPECIAL
-}
-
-function int_divide(numerator, denominator) {
-    if(!isFinite(numerator) || !isFinite(denominator)) {
-        throw new Error(`int_divide with non-finite numbers ${numerator} / ${denominator}`)
-    }
-    return Math.floor(numerator / denominator)
-}
-
-/**
- * Calculate the stat.
- * @param {number} stat 
- * @param {boolean} badge_boost 
- * @param {number} stage 
- * @returns 
- */
-function calculate_stat(stat, badge_boost, stage) {
-    switch(stage) {
-        case -6: stat = int_divide(stat * 25, 100); break;
-        case -5: stat = int_divide(stat * 28, 100); break;
-        case -4: stat = int_divide(stat * 33, 100); break;
-        case -3: stat = int_divide(stat * 40, 100); break;
-        case -2: stat = int_divide(stat * 50, 100); break;
-        case -1: stat = int_divide(stat * 66, 100); break;
-        case 0:  break;
-        case +1: stat = int_divide(stat * 150, 100); break;
-        case +2: stat = int_divide(stat * 200, 100); break;
-        case +3: stat = int_divide(stat * 250, 100); break;
-        case +4: stat = int_divide(stat * 300, 100); break;
-        case +5: stat = int_divide(stat * 350, 100); break;
-        case +6: stat = int_divide(stat * 400, 100); break;
-    }
-
-    if(stat < 1) {
-        stat = 1;
-    }
-
-    if(badge_boost) {
-        stat += int_divide(stat, 8)
-    }
-
-    if(stat > 999) {
-        stat = 999
-    }
-
-    return stat
 }
 
 export function calculate_damage_for_all_moves(attacker, defender, warnings, properties) {
@@ -371,7 +130,7 @@ export function calculate_damage_for_all_moves(attacker, defender, warnings, pro
             results.push(null)
         }
         else {
-            results.push(calculate_damage_for_move(c, moves_json[c], attacker, defender, warnings, properties))
+            results.push(calculate_damage_for_move(c, attacker, defender, warnings, properties))
         }
     }
 
@@ -381,7 +140,13 @@ export function calculate_damage_for_all_moves(attacker, defender, warnings, pro
 const MIN_ROLL = 217
 const MAX_ROLL = 255
 
-function calculate_damage_for_move(move_type, move_data_original, attacker, defender, warnings, properties) {
+function calculate_damage_for_move(move_type, attacker, defender, warnings, properties) {
+    const game = properties.game
+    const generation = generation_of_game(game)
+
+    const moves = get_moves(game)
+    const move_data_original = moves[move_type]
+
     let { per_hit, weather, max_rolls, max_turns, cutoff } = properties
     const move_data = { ...move_data_original }
     apply_move_modifications(move_data, attacker)
@@ -390,9 +155,9 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
         return null
     }
 
-    const [noncrit_stats, crit_stats] = get_attack_and_defense_stat(move_data, attacker, defender)
+    const [noncrit_stats, crit_stats] = get_attack_and_defense_stat(game, generation, move_data, attacker, defender)
 
-    const noncrit_damage = calculate_max_damage_for_move_with_stats(move_type, move_data, attacker, defender, noncrit_stats, false, weather)
+    const noncrit_damage = calculate_max_damage_for_move_with_stats(generation, move_type, move_data, attacker, defender, noncrit_stats, false, weather)
 
     if(noncrit_damage === 0) {
         return null
@@ -406,7 +171,7 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
         rolls: null
     }
 
-    const crit_damage = calculate_max_damage_for_move_with_stats(move_type, move_data, attacker, defender, crit_stats, true, weather)
+    const crit_damage = calculate_max_damage_for_move_with_stats(generation, move_type, move_data, attacker, defender, crit_stats, true, weather)
     const crit_rate = get_crit_chance({move_data, move_type, attacker})
 
     const roll_generator = (multiplier) => generate_rolls_for_move({
@@ -429,31 +194,46 @@ function calculate_damage_for_move(move_type, move_data_original, attacker, defe
     }
 
     let accuracy_over_256 = move_data.accuracy_out_of_256
-    if(move_data.effect === "EFFECT_OHKO") {
-        const attacker_level = attacker.data.level
-        const defender_level = defender.data.level
-        const difference = attacker_level - defender_level
-        if(difference < 0) {
-            return null
-        }
-        accuracy_over_256 = Math.min(accuracy_over_256 + difference * 2, 255)
-    }
-    else if(move_data.effect === "EFFECT_THUNDER") {
-        switch(weather) {
-            // accuracy is set to 100% (note: this is redundant as it'll bypass accuracy anyway, but the game does this)
-            case Weather.RAIN: accuracy_over_256 = 255; break;
 
-            // accuracy is set to 50%
-            case Weather.SUN: accuracy_over_256 = 128; break;
+    if(generation === Generation.Gen1) {
+        if(move_data.effect === "EFFECT_OHKO") {
+            if(defender.stats.speed > attacker.stats.speed) {
+                return null
+            }
         }
     }
-    accuracy_over_256 = calculate_final_accuracy_over_256(accuracy_over_256, attacker.data.stages.accuracy, defender.data.stages.evasion)
+    if(generation === Generation.Gen2) {
+        if(move_data.effect === "EFFECT_OHKO") {
+            const attacker_level = attacker.data.level
+            const defender_level = defender.data.level
+            const difference = attacker_level - defender_level
+            if(difference < 0) {
+                return null
+            }
+            accuracy_over_256 = Math.min(accuracy_over_256 + difference * 2, 255)
+        }
+        else if(move_data.effect === "EFFECT_THUNDER") {
+            switch(weather) {
+                // accuracy is set to 100% (note: this is redundant as it'll bypass accuracy anyway, but the game does this)
+                case Weather.RAIN: accuracy_over_256 = 255; break;
+
+                // accuracy is set to 50%
+                case Weather.SUN: accuracy_over_256 = 128; break;
+            }
+        }
+    }
+
+    accuracy_over_256 = calculate_final_accuracy_over_256(game, accuracy_over_256, attacker.data.stages.accuracy, defender.data.stages.evasion)
 
     let accuracy = accuracy_over_256 / 256
 
     const bypasses_accuracy = (() => {
         if(move_data.effect === "EFFECT_ALWAYS_HIT") {
             return true
+        }
+
+        if(generation === Generation.Gen1) {
+            return false
         }
 
         if(accuracy_over_256 >= 255) {
@@ -651,32 +431,30 @@ function generate_rolls_for_move({
     }
 }
 
-function calculate_final_accuracy_over_256(base_accuracy, attacker_accuracy_stage, defender_evasion_stage) {
+function calculate_final_accuracy_over_256(game, base_accuracy, attacker_accuracy_stage, defender_evasion_stage) {
     let accuracy = base_accuracy
+    let accuracy_ratio
+    let evasion_ratio
 
-    const [num_acc, den_acc] = MODIFIER_FOR_ACCURACY[attacker_accuracy_stage]
-    const [num_eva, den_ev] = MODIFIER_FOR_ACCURACY[-defender_evasion_stage]
+    switch(generation_of_game(game)) {
+        case Generation.Gen1:
+            accuracy_ratio = MODIFIER_FOR_STAT[attacker_accuracy_stage]
+            evasion_ratio = MODIFIER_FOR_STAT[-defender_evasion_stage]
+            return accuracy
+
+        case Generation.Gen2:
+            accuracy_ratio = gen2.MODIFIER_FOR_ACCURACY[attacker_accuracy_stage]
+            evasion_ratio = gen2.MODIFIER_FOR_ACCURACY[-defender_evasion_stage]
+            break
+    }
+
+    const [num_acc, den_acc] = accuracy_ratio
+    const [num_eva, den_ev] = evasion_ratio
 
     accuracy = Math.min(Math.max(int_divide(accuracy * num_acc, den_acc), 0), 65535)
     accuracy = Math.min(Math.max(int_divide(accuracy * num_eva, den_ev), 0), 255)
 
     return accuracy
-}
-
-const MODIFIER_FOR_ACCURACY = {
-    [-6]: [33, 100],
-    [-5]: [36, 100],
-    [-4]: [43, 100],
-    [-3]: [50, 100],
-    [-2]: [60, 100],
-    [-1]: [75, 100],
-    [0]: [1, 1],
-    [1]: [133, 100],
-    [2]: [166, 100],
-    [3]: [2, 1],
-    [4]: [233, 100],
-    [5]: [133, 50],
-    [6]: [3, 1]
 }
 
 function calculate_per_turn_rolls(move_data, rolls) {
@@ -915,42 +693,18 @@ function calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rol
 
 }
 
-function calculate_damage_subtotal(move_data, attacker, stats, is_crit) {
-    const total_power = (int_divide(2 * (attacker.data.level & 255), 5) + 2) * move_data.base_power * (stats.attack & 65535)
-    let defense = stats.defense & 65535
+function calculate_max_damage_for_move_with_stats(generation, move_type, move_data, attacker, defender, stats, is_crit, weather) {
+    let total_damage = calculate_damage_subtotal(generation, move_data, attacker, stats, is_crit)
 
-    if(move_data.effect === "EFFECT_SELFDESTRUCT") {
-        defense = Math.max(int_divide(defense, 2), 1)
+    switch(generation) {
+        case Generation.Gen1:
+            throw new Error("TODO: gen1 damage")
+        case Generation.Gen2:
+            total_damage = gen2.apply_type_effectiveness(move_type, total_damage, move_data, attacker, defender, weather)
+            break
+        default:
+            unreachable()
     }
-
-    let total_damage = int_divide(int_divide(total_power, defense), 50)
-
-    // TODO: item boost (value / 100)
-
-    // prevent dealing more than 999 damage
-    if(total_damage > 997) {
-        total_damage = 997
-    }
-
-    if(is_crit) {
-        total_damage *= 2
-    }
-
-    // Yes, the game caps crit damage at 65535.
-    // Yes, the maximum it could *actually* reach at this point is 1998.
-    // Yes, it's Gen 2.
-    // ...
-    // Okay, carry on.
-    if(total_damage > 65535) {
-        return 65535
-    }
-
-    return total_damage + 2
-}
-
-function calculate_max_damage_for_move_with_stats(move_type, move_data, attacker, defender, stats, is_crit, weather) {
-    let total_damage = calculate_damage_subtotal(move_data, attacker, stats, is_crit)
-    total_damage = apply_type_effectiveness(move_type, total_damage, move_data, attacker, defender, weather)
 
     if(total_damage === 0) {
         return 0
@@ -959,214 +713,92 @@ function calculate_max_damage_for_move_with_stats(move_type, move_data, attacker
     return total_damage
 }
 
-function apply_type_effectiveness(move_type, total_damage, move_data, attacker, defender, weather) {
-    if(move_type === "STRUGGLE") {
-        // struggle skips this whole function (this is not part of its move effect; the game's just hardcoded)
-        return total_damage
-    }
 
-    // Some effects also simply don't call this
-    switch(move_data.effect) {
-        case "EFFECT_FUTURE_SIGHT": return total_damage
-        case "EFFECT_BEAT_UP": return total_damage
-    }
-
-    switch(move_data.type) {
-        case "Fire": {
-            switch(weather) {
-                case Weather.SUN: total_damage += int_divide(total_damage, 2); break
-                case Weather.RAIN: total_damage = Math.max(int_divide(total_damage, 2), 1); break
-            }
-            break
-        }
-        case "Water": {
-            switch(weather) {
-                case Weather.RAIN: total_damage += int_divide(total_damage, 2); break
-                case Weather.SUN: total_damage = Math.max(int_divide(total_damage, 2), 1); break
-            }
-            break
-        }
-    }
-
-    // Solarbeam's damage is also halved in the rain; this is applied after type-based modifiers
-    if(move_data.effect === "EFFECT_SOLARBEAM" && weather === Weather.RAIN) {
-        total_damage = Math.max(int_divide(total_damage, 2), 1)
-    }
-
-    const badge_boost_index = TypeBadgeBoosts[move_data.type]
-    if(badge_boost_index != null && attacker.badges?.[badge_boost_index]) {
-        total_damage += int_divide(total_damage, 8)
-    }
-
-    if(attacker.data.types.includes(move_data.type)) {
-        total_damage += int_divide(total_damage, 2)
-    }
-
-    for(const t of defender.data.types) {
-        const type_effectiveness = TYPE_EFFECTIVENESS[t]
-        if(type_effectiveness == null) {
-            continue
-        }
-        if(type_effectiveness.immunities?.includes(move_data.type)) {
-            return 0
-        }
-        if(type_effectiveness.weaknesses?.includes(move_data.type)) {
-            total_damage = Math.max(int_divide(total_damage * 20, 10), 1)
-        }
-        if(type_effectiveness.resistances?.includes(move_data.type)) {
-            total_damage = Math.max(int_divide(total_damage * 5, 10), 1)
-        }
-    }
-
-    return total_damage
-}
-
-export const TypeBadgeBoosts = {
-    [Type.FLYING]: 0,
-    [Type.BUG]: 1,
-    [Type.NORMAL]: 2,
-    [Type.GHOST]: 3,
-    [Type.FIGHTING]: 4,
-    [Type.STEEL]: 5,
-    [Type.ICE]: 6,
-    [Type.DRAGON]: 7,
-    [Type.ROCK]: 8,
-    [Type.WATER]: 9,
-    [Type.ELECTRIC]: 10,
-    [Type.GRASS]: 11,
-    [Type.POISON]: 12,
-    [Type.PSYCHIC]: 13,
-    [Type.FIRE]: 14,
-    [Type.GROUND]: 15
-}
-
-const TYPE_EFFECTIVENESS = {
-    [Type.NORMAL]: {
-        "weaknesses": [Type.FIGHTING],
-        "resistances": [],
-        "immunities": [Type.GHOST]
-    },
-    [Type.FIGHTING]: {
-        "weaknesses": [Type.FLYING, Type.PSYCHIC],
-        "resistances": [Type.DARK, Type.BUG, Type.ROCK],
-        "immunities": []
-    },
-    [Type.FLYING]: {
-        "weaknesses": [Type.ICE, Type.ROCK, Type.ELECTRIC],
-        "resistances": [Type.FIGHTING, Type.BUG, Type.GRASS],
-        "immunities": [Type.GROUND]
-    },
-    [Type.POISON]: {
-        "weaknesses": [Type.GROUND, Type.PSYCHIC],
-        "resistances": [Type.POISON, Type.BUG, Type.GRASS, Type.FIGHTING],
-        "immunities": []
-    },
-    [Type.GROUND]: {
-        "weaknesses": [Type.ICE, Type.WATER, Type.GRASS],
-        "resistances": [Type.ROCK, Type.POISON],
-        "immunities": [Type.ELECTRIC]
-    },
-    [Type.ROCK]: {
-        "weaknesses": [Type.GROUND, Type.FIGHTING, Type.WATER, Type.GRASS, Type.STEEL],
-        "resistances": [Type.NORMAL, Type.FLYING, Type.POISON, Type.FIRE],
-        "immunities": []
-    },
-    [Type.BIRD]: {
-        "weaknesses": [],
-        "resistances": [],
-        "immunities": []
-    },
-    [Type.BUG]: {
-        "weaknesses": [Type.FIRE, Type.FLYING, Type.ROCK],
-        "resistances": [Type.GRASS, Type.FIGHTING, Type.GROUND],
-        "immunities": []
-    },
-    [Type.GHOST]: {
-        "weaknesses": [Type.GHOST, Type.DARK],
-        "resistances": [Type.POISON, Type.BUG],
-        "immunities": [Type.NORMAL, Type.PSYCHIC]
-    },
-    [Type.STEEL]: {
-        "weaknesses": [Type.FIGHTING, Type.GROUND, Type.FIRE],
-        "resistances": [Type.NORMAL, Type.FLYING, Type.ROCK, Type.BUG, Type.STEEL, Type.GRASS, Type.PSYCHIC, Type.ICE, Type.DRAGON, Type.DARK, Type.GHOST],
-        "immunities": [Type.POISON]
-    },
-    [Type.CURSE]: {
-        "weaknesses": [],
-        "resistances": [],
-        "immunities": []
-    },
-    [Type.FIRE]: {
-        "weaknesses": [Type.WATER, Type.GROUND, Type.ROCK],
-        "resistances": [Type.GRASS, Type.FIRE, Type.BUG, Type.STEEL, Type.ICE],
-        "immunities": []
-    },
-    [Type.WATER]: {
-        "weaknesses": [Type.ELECTRIC, Type.GRASS],
-        "resistances": [Type.WATER, Type.FIRE, Type.STEEL, Type.ICE],
-        "immunities": []
-    },
-    [Type.GRASS]: {
-        "weaknesses": [Type.FIRE, Type.POISON, Type.BUG, Type.ICE, Type.FLYING],
-        "resistances": [Type.GRASS, Type.WATER, Type.GROUND, Type.ELECTRIC],
-        "immunities": []
-    },
-    [Type.ELECTRIC]: {
-        "weaknesses": [Type.GROUND],
-        "resistances": [Type.STEEL, Type.ELECTRIC, Type.FLYING],
-        "immunities": []
-    },
-    [Type.PSYCHIC]: {
-        "weaknesses": [Type.DARK, Type.GHOST, Type.BUG],
-        "resistances": [Type.PSYCHIC, Type.FIGHTING],
-        "immunities": []
-    },
-    [Type.ICE]: {
-        "weaknesses": [Type.FIRE, Type.ROCK, Type.FIGHTING, Type.STEEL],
-        "resistances": [Type.ICE],
-        "immunities": []
-    },
-    [Type.DRAGON]: {
-        "weaknesses": [Type.ICE, Type.DRAGON],
-        "resistances": [Type.ELECTRIC, Type.FIRE, Type.WATER, Type.GRASS],
-        "immunities": []
-    },
-    [Type.DARK]: {
-        "weaknesses": [Type.FIGHTING, Type.BUG],
-        "resistances": [Type.DARK, Type.GHOST],
-        "immunities": [Type.PSYCHIC]
-    },
-}
-
-function get_attack_and_defense_stat(move_data, attacker, defender) {
-    const crit_physical_reuse_stat = attacker.data.stages.attack > attacker.data.stages.defense
-    const crit_special_reuse_stat = attacker.data.stages.special_attack > attacker.data.stages.special_defense
-
+function get_attack_and_defense_stat(game, generation, move_data, attacker, defender) {
     let is_physical = damage_category_of_type(move_data.type) === DamageCategory.PHYSICAL
     let is_special = !is_physical
 
-    let stats
-    if(is_physical) {
-        stats = { attack: attacker.stats.attack, defense: defender.stats.defense, attack_crit: crit_physical_reuse_stat ? attacker.stats.attack : attacker.data.stats.attack, defense_crit: crit_physical_reuse_stat ? defender.stats.defense : defender.data.stats.defense }
-    }
-    else {
-        stats = { attack: attacker.stats.special_attack, defense: defender.stats.special_defense, attack_crit: crit_special_reuse_stat ? attacker.stats.special_attack : attacker.data.stats.special_attack, defense_crit: crit_special_reuse_stat ? defender.stats.special_defense : defender.data.stats.special_defense }
+    // TODO: In Gen 1, this can divide by 0 (if we have a defense stat less than 4 and an attack stat greater
+    //  than 255), which is accurate to the Gen 1 games, but it means it will crash those games where we'll
+    //  otherwise just get some weird infinity logic nonsense here... we should probably handle this
+    //
+    // TODO: Also check if Gen 2 can return 0 defense here (and if so, does it handle 0 defense?)
+
+    const make_stats_u8 = (stats, attack_key, defense_key) => {
+        let attack = stats[attack_key]
+        let defense = stats[defense_key]
+
+        if(attack > 255 || defense > 255) {
+            attack = int_divide(attack, 4)
+            defense = int_divide(defense, 4)
+
+            if(generation !== Generation.Gen1) {
+                attack = Math.max(attack, 1)
+                defense = Math.max(defense, 1)
+            }
+
+            stats[attack_key] = attack
+            stats[defense_key] = defense
+
+            return true
+        }
+        else {
+            return false
+        }
     }
 
-    while(stats.attack > 255 && stats.defense > 255) {
-        stats.attack = Math.max(int_divide(stats.attack, 4), 1)
-        stats.defense = Math.max(int_divide(stats.defense, 4), 1)
+    const make_stats_u8_loop = (stats, attack_key, defense_key) => {
+        while(make_stats_u8(stats, attack_key, defense_key)) {
+            if(game !== Game.Crystal) {
+                // TODO: Handle Crystal which lets it do this a second time in non link battles
+                break
+            }
+        }
     }
 
-    while(stats.attack_crit > 255 && stats.defense_crit > 255) {
-        stats.attack_crit = Math.max(int_divide(stats.attack_crit, 4), 1)
-        stats.defense_crit = Math.max(int_divide(stats.defense_crit, 4), 1)
+    const make_stats_u8_all = (stats) => {
+        make_stats_u8_loop(stats, "attack", "defense")
+        make_stats_u8_loop(stats, "attack_crit", "defense_crit")
     }
 
-    return [
-        { attack: stats.attack, defense: stats.defense, is_physical, is_special },
-        { attack: stats.attack_crit, defense: stats.defense_crit, is_physical, is_special }
-    ]
+    switch(generation) {
+        case Generation.Gen1: {
+            let stats
+            if(is_physical) {
+                stats = { attack: attacker.stats.attack, defense: defender.stats.defense, attack_crit: attacker.data.stats.attack, defense_crit: defender.data.stats.defense }
+            }
+            else {
+                stats = { attack: attacker.stats.special_attack, defense: defender.stats.special_defense, attack_crit: attacker.data.stats.special_attack, defense_crit: defender.data.stats.special_defense }
+            }
+
+            make_stats_u8_all(stats)
+
+            return [
+                { attack: stats.attack, defense: stats.defense, is_physical, is_special },
+                { attack: stats.attack_crit, defense: stats.defense_crit, is_physical, is_special }
+            ]
+        }
+        case Generation.Gen2: {
+            const crit_physical_reuse_stat = attacker.data.stages.attack > attacker.data.stages.defense
+            const crit_special_reuse_stat = attacker.data.stages.special_attack > attacker.data.stages.special_defense
+
+            let stats
+            if(is_physical) {
+                stats = { attack: attacker.stats.attack, defense: defender.stats.defense, attack_crit: crit_physical_reuse_stat ? attacker.stats.attack : attacker.data.stats.attack, defense_crit: crit_physical_reuse_stat ? defender.stats.defense : defender.data.stats.defense }
+            }
+            else {
+                stats = { attack: attacker.stats.special_attack, defense: defender.stats.special_defense, attack_crit: crit_special_reuse_stat ? attacker.stats.special_attack : attacker.data.stats.special_attack, defense_crit: crit_special_reuse_stat ? defender.stats.special_defense : defender.data.stats.special_defense }
+            }
+
+            make_stats_u8_all(stats)
+
+            return [
+                { attack: stats.attack, defense: stats.defense, is_physical, is_special },
+                { attack: stats.attack_crit, defense: stats.defense_crit, is_physical, is_special }
+            ]
+        }
+        default: unreachable()
+    }
 }
 
 function apply_move_modifications(move_data, attacker) {
@@ -1187,34 +819,3 @@ function apply_move_modifications(move_data, attacker) {
         }
     }
 }
-
-export function get_hidden_power_stats({attack, defense, special, speed}) {
-    const mask = 0b1000
-
-    const base_power = 31 + int_divide(
-        (((attack & mask) * 40 + (defense & mask) * 20 + (speed & mask) * 10 + (special & mask) * 5) >> 3)
-        + (special & 0b11), 2)
-
-    const type = HIDDEN_POWER_TYPE_TABLE[((attack & 0b11) << 2) | (defense & 0b11)]
-
-    return { base_power, type }
-}
-
-const HIDDEN_POWER_TYPE_TABLE = Object.freeze([
-    Type.FIGHTING,
-    Type.FLYING,
-    Type.POISON,
-    Type.GROUND,
-    Type.ROCK,
-    Type.BUG,
-    Type.GHOST,
-    Type.STEEL,
-    Type.FIRE,
-    Type.WATER,
-    Type.GRASS,
-    Type.ELECTRIC,
-    Type.PSYCHIC,
-    Type.ICE,
-    Type.DRAGON,
-    Type.DARK
-])
