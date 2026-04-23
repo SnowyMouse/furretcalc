@@ -1,0 +1,890 @@
+{
+    "Master Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Ultra Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Brightpowder": {
+        "effect": "HELD_BRIGHTPOWDER",
+        "parameter": 20
+    },
+    "Great Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Poké Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Bicycle": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Moon Stone": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Antidote": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Burn Heal": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Ice Heal": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Awakening": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Parlyz Heal": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Full Restore": {
+        "effect": "HELD_NONE",
+        "parameter": -1
+    },
+    "Max Potion": {
+        "effect": "HELD_NONE",
+        "parameter": -1
+    },
+    "Hyper Potion": {
+        "effect": "HELD_NONE",
+        "parameter": 200
+    },
+    "Super Potion": {
+        "effect": "HELD_NONE",
+        "parameter": 50
+    },
+    "Potion": {
+        "effect": "HELD_NONE",
+        "parameter": 20
+    },
+    "Escape Rope": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Repel": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Max Elixer": {
+        "effect": "HELD_NONE",
+        "parameter": -1
+    },
+    "Fire Stone": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Thunderstone": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Water Stone": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "HP Up": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Protein": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Iron": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Carbos": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Lucky Punch": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Calcium": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Rare Candy": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "X Accuracy": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Leaf Stone": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Metal Powder": {
+        "effect": "HELD_METAL_POWDER",
+        "parameter": 10
+    },
+    "Nugget": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Poké Doll": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Full Heal": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Revive": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Max Revive": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Guard Spec.": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Super Repel": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Max Repel": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Dire Hit": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Fresh Water": {
+        "effect": "HELD_NONE",
+        "parameter": 50
+    },
+    "Soda Pop": {
+        "effect": "HELD_NONE",
+        "parameter": 60
+    },
+    "Lemonade": {
+        "effect": "HELD_NONE",
+        "parameter": 80
+    },
+    "X Attack": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "X Defend": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "X Speed": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "X Special": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Coin Case": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Itemfinder": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Exp.Share": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Old Rod": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Good Rod": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Silver Leaf": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Super Rod": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "PP Up": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Ether": {
+        "effect": "HELD_NONE",
+        "parameter": 10
+    },
+    "Max Ether": {
+        "effect": "HELD_NONE",
+        "parameter": -1
+    },
+    "Elixer": {
+        "effect": "HELD_NONE",
+        "parameter": 10
+    },
+    "Red Scale": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Secretpotion": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "S.S.Ticket": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Mystery Egg": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Clear Bell": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Silver Wing": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Moomoo Milk": {
+        "effect": "HELD_NONE",
+        "parameter": 100
+    },
+    "Quick Claw": {
+        "effect": "HELD_QUICK_CLAW",
+        "parameter": 60
+    },
+    "Psncureberry": {
+        "effect": "HELD_HEAL_POISON",
+        "parameter": 0
+    },
+    "Gold Leaf": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Soft Sand": {
+        "effect": "HELD_GROUND_BOOST",
+        "parameter": 10
+    },
+    "Sharp Beak": {
+        "effect": "HELD_FLYING_BOOST",
+        "parameter": 10
+    },
+    "Przcureberry": {
+        "effect": "HELD_HEAL_PARALYZE",
+        "parameter": 0
+    },
+    "Burnt Berry": {
+        "effect": "HELD_HEAL_FREEZE",
+        "parameter": 0
+    },
+    "Ice Berry": {
+        "effect": "HELD_HEAL_BURN",
+        "parameter": 0
+    },
+    "Poison Barb": {
+        "effect": "HELD_POISON_BOOST",
+        "parameter": 10
+    },
+    "King's Rock": {
+        "effect": "HELD_FLINCH",
+        "parameter": 30
+    },
+    "Bitter Berry": {
+        "effect": "HELD_HEAL_CONFUSION",
+        "parameter": 0
+    },
+    "Mint Berry": {
+        "effect": "HELD_HEAL_SLEEP",
+        "parameter": 0
+    },
+    "Red Apricorn": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Tinymushroom": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Big Mushroom": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Silverpowder": {
+        "effect": "HELD_BUG_BOOST",
+        "parameter": 10
+    },
+    "Blu Apricorn": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Amulet Coin": {
+        "effect": "HELD_AMULET_COIN",
+        "parameter": 10
+    },
+    "Ylw Apricorn": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Grn Apricorn": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Cleanse Tag": {
+        "effect": "HELD_CLEANSE_TAG",
+        "parameter": 0
+    },
+    "Mystic Water": {
+        "effect": "HELD_WATER_BOOST",
+        "parameter": 10
+    },
+    "Twistedspoon": {
+        "effect": "HELD_PSYCHIC_BOOST",
+        "parameter": 10
+    },
+    "Wht Apricorn": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Blackbelt": {
+        "effect": "HELD_FIGHTING_BOOST",
+        "parameter": 10
+    },
+    "Blk Apricorn": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Pnk Apricorn": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Blackglasses": {
+        "effect": "HELD_DARK_BOOST",
+        "parameter": 10
+    },
+    "Slowpoketail": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Pink Bow": {
+        "effect": "HELD_NORMAL_BOOST",
+        "parameter": 10
+    },
+    "Stick": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Smoke Ball": {
+        "effect": "HELD_ESCAPE",
+        "parameter": 0
+    },
+    "Nevermeltice": {
+        "effect": "HELD_ICE_BOOST",
+        "parameter": 10
+    },
+    "Magnet": {
+        "effect": "HELD_ELECTRIC_BOOST",
+        "parameter": 10
+    },
+    "Miracleberry": {
+        "effect": "HELD_HEAL_STATUS",
+        "parameter": 0
+    },
+    "Pearl": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Big Pearl": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Everstone": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Spell Tag": {
+        "effect": "HELD_GHOST_BOOST",
+        "parameter": 10
+    },
+    "Ragecandybar": {
+        "effect": "HELD_NONE",
+        "parameter": 20
+    },
+    "Gs Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Blue Card": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Miracle Seed": {
+        "effect": "HELD_GRASS_BOOST",
+        "parameter": 10
+    },
+    "Thick Club": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Focus Band": {
+        "effect": "HELD_FOCUS_BAND",
+        "parameter": 30
+    },
+    "Energypowder": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Energy Root": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Heal Powder": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Revival Herb": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Hard Stone": {
+        "effect": "HELD_ROCK_BOOST",
+        "parameter": 10
+    },
+    "Lucky Egg": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Card Key": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Machine Part": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Egg Ticket": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Lost Item": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Stardust": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Star Piece": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Basement Key": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Pass": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Charcoal": {
+        "effect": "HELD_FIRE_BOOST",
+        "parameter": 10
+    },
+    "Berry Juice": {
+        "effect": "HELD_BERRY",
+        "parameter": 20
+    },
+    "Scope Lens": {
+        "effect": "HELD_CRITICAL_UP",
+        "parameter": 0
+    },
+    "Metal Coat": {
+        "effect": "HELD_STEEL_BOOST",
+        "parameter": 10
+    },
+    "Dragon Fang": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Leftovers": {
+        "effect": "HELD_LEFTOVERS",
+        "parameter": 10
+    },
+    "Mysteryberry": {
+        "effect": "HELD_RESTORE_PP",
+        "parameter": -1
+    },
+    "Dragon Scale": {
+        "effect": "HELD_DRAGON_BOOST",
+        "parameter": 10
+    },
+    "Berserk Gene": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Sacred Ash": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Heavy Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Flower Mail": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Level Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Lure Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Fast Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Light Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Friend Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Moon Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Love Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Normal Box": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Gorgeous Box": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Sun Stone": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Polkadot Bow": {
+        "effect": "HELD_NORMAL_BOOST",
+        "parameter": 10
+    },
+    "Up-Grade": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Berry": {
+        "effect": "HELD_BERRY",
+        "parameter": 10
+    },
+    "Gold Berry": {
+        "effect": "HELD_BERRY",
+        "parameter": 30
+    },
+    "Squirtbottle": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Park Ball": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Rainbow Wing": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Brick Piece": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Surf Mail": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Litebluemail": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Portraitmail": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Lovely Mail": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Eon Mail": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Morph Mail": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Bluesky Mail": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Music Mail": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "Mirage Mail": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM01": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM02": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM03": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM04": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM05": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM06": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM07": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM08": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM09": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM10": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM11": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM12": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM13": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM14": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM15": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM16": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM17": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM18": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM19": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM20": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM21": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM22": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM23": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM24": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM25": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM26": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM27": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM28": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM29": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM30": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM31": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM32": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM33": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM34": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM35": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM36": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM37": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM38": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM39": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM40": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM41": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM42": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM43": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM44": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM45": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM46": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM47": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM48": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM49": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "TM50": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "HM01": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "HM02": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "HM03": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "HM04": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "HM05": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "HM06": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    },
+    "HM07": {
+        "effect": "HELD_NONE",
+        "parameter": 0
+    }
+}
