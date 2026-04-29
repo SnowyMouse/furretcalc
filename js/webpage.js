@@ -22,6 +22,7 @@ function recalculate() {
         clearTimeout(debounce_timer)
     }
 
+    document.getElementById("generated_time").innerHTML = "..."
     debounce_timer = setTimeout(actually_recalculate, 200)
 }
 
@@ -70,7 +71,7 @@ async function actually_recalculate() {
 
         const end_time = performance.now()
 
-        console.debug(`Calculation time: ${end_time - start_time} ms`)
+        document.getElementById("generated_time").innerHTML = `${(end_time - start_time).toFixed(0)} ms`
 
         for(const data of document.getElementsByClassName("stats_move_name")) {
             data.innerHTML = ""

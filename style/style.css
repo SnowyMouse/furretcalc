@@ -87,6 +87,13 @@ footer, header {
     width: 100%;
 }
 
+#generated_time {
+    font-size: 11px;
+    margin-top: 5px;
+    font-family: "Hack", monospace;
+    text-align: right;
+}
+
 #badges_box_outer .badge_box {
     font-size: 14px;
     text-align: left;
@@ -266,11 +273,13 @@ header p {
     font-size: 16px;
 }
 
-#instructions, #calculator_content {
-    margin: auto;
-    margin-top: 12px;
-    margin-bottom: 12px;
+#instructions, #calculator_content, #generated_time {
     width: 1500px;
+    margin: auto auto 8px;
+}
+
+#instructions {
+    margin-top: 24px;
 }
 
 #calculator_content {
