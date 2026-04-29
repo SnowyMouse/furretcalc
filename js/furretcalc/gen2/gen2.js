@@ -445,7 +445,7 @@ export const TYPE_EFFECTIVENESS = {
     },
 }
 
-export const TypeBadgeBoostIndex = {
+export const TypeBadgeBoostIndex = Object.freeze({
     [Type.FLYING]: 0,
     [Type.BUG]: 1,
     [Type.NORMAL]: 2,
@@ -462,11 +462,38 @@ export const TypeBadgeBoostIndex = {
     [Type.PSYCHIC]: 13,
     [Type.FIRE]: 14,
     [Type.GROUND]: 15
-}
+})
 
 export const StatBadgeBoostIndex = Object.freeze({
     Attack: 0,
     Defense: 5,
+    // bug: does not always apply special defense
     Special: 6,
     Speed: 2
 })
+
+const BADGES = Object.freeze({
+    "Johto": Object.freeze([
+        "Falkner",
+        "Bugsy",
+        "Whitney",
+        "Morty",
+        "Chuck",
+        "Jasmine",
+        "Pryce",
+        "Clair"
+    ]),
+    "Kanto": Object.freeze([
+        "Brock",
+        "Misty",
+        "Lt. Surge",
+        "Erika",
+        "Janine",
+        "Sabrina",
+        "Blaine",
+        "Blue"
+    ])
+})
+export function get_badge_list() {
+    return BADGES
+}

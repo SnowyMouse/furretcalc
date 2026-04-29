@@ -289,7 +289,9 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
 
         div_data.innerHTML = data_text
 
-        if(turn_chances[0] >= 0.996) {
+        // Highlight guaranteed or near-guaranteed OHKOs.
+        // We do 0.99 instead of 1.0 to account for Gen 1 misses and moves with -1 accuracy with -1 evasion (254/256 = ~99.2%)
+        if(turn_chances[0] > 0.99) {
             document.querySelector(div_selector).classList.add("ohko_move")
         }
         else if(best_ttk_rating != null && cmp_ttk(best_ttk_rating, data) === 0) {
@@ -372,13 +374,8 @@ function get_badges(is_player) {
         return null
     }
     const badges = []
-    if(generation === Generation.Gen2) {
-        for(let i = 1; i <= 8; i++) {
-            badges.push(document.getElementById(`johto_badge_${i}`).checked)
-        }
-    }
-    for(let i = 1; i <= 8; i++) {
-        badges.push(document.getElementById(`kanto_badge_${i}`).checked)
+    for(const badge of document.getElementsByClassName("badge_checkbox")) {
+        badges.push(badge.checked)
     }
     return badges
 }
@@ -601,38 +598,34 @@ function set_up_widgets() {
         tabindex += 1000
     }
 
+    let badge_html = ``
+    let badge_count = 0
+    let select_all_buttons = ``
+    let list_index = 0
+    const badge_lists = Object.entries(furretcalc.get_badge_list(game))
+    for(const [badge_group, badges] of badge_lists) {
+        badge_html += `<ul id="${badge_group}_badges" class="badge_box">`
+        for(const badge of badges) {
+            badge_html += `<li><input type="checkbox" id="badge_${badge_count}" class="badge_checkbox" tabindex="100" /><label for="badge_${badge_count}">${badge}</label></li>`
+            badge_count++
+        }
+        list_index++
+        if(list_index < badge_lists.length) {
+            if(select_all_buttons === "") {
+                select_all_buttons = `<li>&nbsp;</li>`
+            }
+            select_all_buttons += `<li><button onclick="select_all_badges('${badge_group}_badges')" tabindex="100">Select ${badge_group}</button></li>`
+        }
+        badge_html += "</ul>"
+    }
+
     document.getElementById("badges_box_inner").innerHTML = `
-${generation === Generation.Gen2 ? `
-<div id="johto_badges" class="badge_box">
-<ul>
-<li><input type="checkbox" id="johto_badge_1" tabindex="100" /><label for="johto_badge_1">Falkner</label></li>
-<li><input type="checkbox" id="johto_badge_2" tabindex="100" /><label for="johto_badge_2">Bugsy</label></li>
-<li><input type="checkbox" id="johto_badge_3" tabindex="100" /><label for="johto_badge_3">Whitney</label></li>
-<li><input type="checkbox" id="johto_badge_4" tabindex="100" /><label for="johto_badge_4">Morty</label></li>
-<li><input type="checkbox" id="johto_badge_5" tabindex="100" /><label for="johto_badge_5">Chuck</label></li>
-<li><input type="checkbox" id="johto_badge_6" tabindex="100" /><label for="johto_badge_6">Jasmine</label></li>
-<li><input type="checkbox" id="johto_badge_7" tabindex="100" /><label for="johto_badge_7">Pryce</label></li>
-<li><input type="checkbox" id="johto_badge_8" tabindex="100" /><label for="johto_badge_8">Clair</label></li>
-</ul>
-</div>
-` : ``}
-<div id="kanto_badges" class="badge_box">
-<ul>
-<li><input type="checkbox" id="kanto_badge_1" tabindex="100" /><label for="kanto_badge_1">Brock</label></li>
-<li><input type="checkbox" id="kanto_badge_2" tabindex="100" /><label for="kanto_badge_2">Misty</label></li>
-<li><input type="checkbox" id="kanto_badge_3" tabindex="100" /><label for="kanto_badge_3">Lt. Surge</label></li>
-<li><input type="checkbox" id="kanto_badge_4" tabindex="100" /><label for="kanto_badge_4">Erika</label></li>
-<li><input type="checkbox" id="kanto_badge_5" tabindex="100" /><label for="kanto_badge_5">Janine</label></li>
-<li><input type="checkbox" id="kanto_badge_6" tabindex="100" /><label for="kanto_badge_6">Sabrina</label></li>
-<li><input type="checkbox" id="kanto_badge_7" tabindex="100" /><label for="kanto_badge_7">Blaine</label></li>
-<li><input type="checkbox" id="kanto_badge_8" tabindex="100" /><label for="kanto_badge_8">${generation === Generation.Gen2 ? "Blue" : "Giovanni"}</label></li>
-</ul>
-</div>
+${badge_html}
 <div class="control_box">
 <ul>
 <li><button onclick="select_all_badges()" tabindex="100">Select all</button></li>
-${generation === Generation.Gen2 ? `<li><button onclick="select_johto_badges()" tabindex="100">Select Johto</button></li>` : ``}
 <li><button onclick="clear_all_badges()" tabindex="100">Clear all</button></li>
+${select_all_buttons}
 </ul>
 </div>`
 
@@ -1066,31 +1059,21 @@ function refresh_trainer_pokemon_data() {
 }
 
 function clear_all_badges() {
-    for(let i = 1; i <= 8; i++) {
-        if(generation === Generation.Gen2) {
-            document.getElementById(`johto_badge_${i}`).checked = false
+    for(const c of document.getElementsByClassName("badge_checkbox")) {
+        c.checked = false
+    }
+    recalculate()
+}
+
+function select_all_badges(of) {
+    if(of == null) {
+        for(const c of document.getElementsByClassName("badge_checkbox")) {
+            c.checked = true
         }
-        document.getElementById(`kanto_badge_${i}`).checked = false
-    }
-    recalculate()
-}
-
-function select_johto_badges() {
-    if(generation !== Generation.Gen2) {
-        return
-    }
-
-    for(let i = 1; i <= 8; i++) {
-        document.getElementById(`johto_badge_${i}`).checked = true
-    }
-    recalculate()
-}
-
-function select_all_badges() {
-    select_johto_badges()
-
-    for(let i = 1; i <= 8; i++) {
-        document.getElementById(`kanto_badge_${i}`).checked = true
+    } else {
+        for(const c of document.querySelectorAll(`#${of} .badge_checkbox`)) {
+            c.checked = true
+        }
     }
     recalculate()
 }
@@ -1188,6 +1171,9 @@ function reshow_range() {
 
     const badge_boosts = furretcalc.get_stat_badge_boost_badges(game)
 
+    let attack_boost
+    let defense_boost
+
     if(infos.data.is_physical) {
         attack_name = "ATK"
         defense_name = "DEF"
@@ -1196,33 +1182,26 @@ function reshow_range() {
         attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.attack))
         defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.defense))
 
-        const attack_boost = infos.stats.badges?.[badge_boosts.Attack] ?? false
-        const defense_boost = infos.stats_opposite.badges?.[badge_boosts.Defense] ?? false
-
-        if(attack_boost) {
-            attack_boost_info.push("+ATK")
-        }
-        if(defense_boost) {
-            defense_boost_info.push("+DEF")
-        }
+        attack_boost = infos.stats.badges?.[badge_boosts.Attack] ?? false
+        defense_boost = infos.stats_opposite.badges?.[badge_boosts.Defense] ?? false
     }
     else {
-        attack_name = "SPA"
-        defense_name = "SPD"
+        attack_name = generation === Generation.Gen1 ? "SPC" : "SPA"
+        defense_name = generation === Generation.Gen1 ? "SPD" : "SPA"
         attack = infos.stats.data.stats.special_attack
         defense = infos.stats_opposite.data.stats.special_defense
         attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.special_attack))
         defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.special_defense))
 
-        const attack_boost = infos.stats.badges?.[badge_boosts.Special] ?? false
-        const defense_boost = (infos.stats_opposite.badges?.[badge_boosts.Special] ?? false) && furretcalc.receives_special_defense_boost(infos.stats_opposite.data.stats.special_attack)
+        attack_boost = infos.stats.badges?.[badge_boosts.Special] ?? false
+        defense_boost = (infos.stats_opposite.badges?.[badge_boosts.Special] ?? false) && furretcalc.receives_special_defense_boost(game, infos.stats_opposite.data.stats.special_attack)
+    }
 
-        if(attack_boost) {
-            attack_boost_info.push("+SPA")
-        }
-        if(defense_boost) {
-            defense_boost_info.push("+SPD")
-        }
+    if(attack_boost) {
+        attack_boost_info.push(`+${attack_name}`)
+    }
+    if(defense_boost) {
+        defense_boost_info.push(`+${defense_name}`)
     }
 
     const badge_boost_index = furretcalc.get_type_badge_boost_badges(game)[infos.data.move_data.type]
@@ -1314,7 +1293,6 @@ function reshow_range() {
 
 window.clear_all_badges = clear_all_badges
 window.select_all_badges = select_all_badges
-window.select_johto_badges = select_johto_badges
 window.show_range = show_range
 window.show_instructions = () => {
     document.getElementById("instructions").style.display = "block"

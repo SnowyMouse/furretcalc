@@ -1,5 +1,6 @@
 "use strict"
 
+import * as gen1 from "./gen1/gen1.js"
 import * as gen2 from "./gen2/gen2.js"
 
 export * as util from "./util.js"
@@ -78,7 +79,7 @@ export function get_parties(game) {
 export function get_stat_badge_boost_badges(game) {
     switch(generation_of_game(game)) {
         case Generation.Gen1:
-            throw new Error("TODO: gen 1 badge boosts")
+            return gen1.StatBadgeBoostIndex
         case Generation.Gen2:
             return gen2.StatBadgeBoostIndex
         default:
@@ -108,6 +109,17 @@ export function get_type_boost_items(game) {
     }
 }
 
+export function get_badge_list(game) {
+    switch(generation_of_game(game)) {
+        case Generation.Gen1:
+            return gen1.get_badge_list(game)
+        case Generation.Gen2:
+            return gen2.get_badge_list(game)
+        default:
+            unreachable()
+    }
+}
+
 export async function load_furretcalc(base_url) {
     if(loaded) {
         return loaded
@@ -125,8 +137,15 @@ export async function wait_loaded() {
     await loaded
 }
 
-export function receives_special_defense_boost(unboosted_special_attack) {
-    return (unboosted_special_attack >= 206 && unboosted_special_attack <= 432) || (unboosted_special_attack >= 661) // gen 2 is great
+export function receives_special_defense_boost(game, unboosted_special_attack) {
+    switch(generation_of_game(game)) {
+        case Generation.Gen1:
+            return true
+        case Generation.Gen2:
+            return (unboosted_special_attack >= 206 && unboosted_special_attack <= 432) || (unboosted_special_attack >= 661) // gen 2 is great
+        default:
+            unreachable()
+    }
 }
 
 export function calculate_battle_stats(game, out_of_battle_stats, badges, stages, status) {
@@ -141,7 +160,7 @@ export function calculate_battle_stats(game, out_of_battle_stats, badges, stages
     const attack_boost = badges?.[badge_boosts.Attack] ?? false
     const defense_boost = badges?.[badge_boosts.Defense] ?? false
     const special_attack_boost = badges?.[badge_boosts.Special] ?? false
-    const special_defense_boost = special_attack_boost && receives_special_defense_boost(special_attack)
+    const special_defense_boost = special_attack_boost && receives_special_defense_boost(game, special_attack)
     const speed_boost = badges?.[badge_boosts.Speed] ?? false
 
     return {
