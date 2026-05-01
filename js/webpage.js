@@ -1,7 +1,7 @@
 "use strict"
 
 import * as furretcalc from "./furretcalc/furretcalc.js"
-import {Generation, generation_of_game} from "./furretcalc/util.js";
+import {Generation, generation_of_game, StatusCondition} from "./furretcalc/util.js";
 
 furretcalc.load_furretcalc("./js/furretcalc")
     .then(() => set_up_widgets_initial())
@@ -674,10 +674,11 @@ ${select_all_buttons}
     for(const status of document.getElementsByClassName("status")) {
         status.innerHTML = `
         <option value="OK">OK</option>
-        <option value="BRN">Burn</option>
-        <option value="PRZ">Paralysis</option>
-        <option value="SLP">Asleep</option>
-        <option value="FRZ">Frozen</option>
+        <option value="${StatusCondition.BURN}">Burn</option>
+        <option value="${StatusCondition.PARALYZE}">Paralysis</option>
+        <option value="${StatusCondition.SLEEP}">Asleep</option>
+        <option value="${StatusCondition.FREEZE}">Frozen</option>
+        <option value="${StatusCondition.POISON}">Poison</option>
         `
     }
 
@@ -1450,6 +1451,8 @@ function stat_loop() {
         document.getElementById(`badge_${b}`).checked = badges[b]
     }
 
+    const field = stat_getter.get_weather()
+    document.getElementById("weather").value = field || "Clear"
 
     function update_stats(is_player) {
         const stats = stat_getter.get_stats(is_player)
@@ -1591,21 +1594,8 @@ function stat_loop() {
 }
 
 class StatGetter {
-    get_out_of_battle_party_member(player) {
-        if(player) {
-            return [
-                client.properties.player.team[client.properties.player.party_position.value],
-                client.properties.player.active_pokemon,
-                client.properties.battle.field.player
-            ]
-        }
-        else {
-            return [
-                client.properties.battle.opponent.team[client.properties.battle.opponent.party_position.value],
-                client.properties.battle.opponent.active_pokemon,
-                client.properties.battle.field.opponent
-            ]
-        }
+    get_weather() {
+        return client.properties.battle.field.weather.value
     }
 
     get_badges() {
@@ -1613,7 +1603,7 @@ class StatGetter {
     }
 
     get_stats(player) {
-        const [party_member, active_member, field] = this.get_out_of_battle_party_member(player)
+        const [party_member, active_member, field] = this._get_stats_for_side(player)
         const types = [
             active_member.type_1.value.toUpperCase(),
             active_member.type_2.value.toUpperCase(),
@@ -1662,6 +1652,23 @@ class StatGetter {
             light_screen: field.lightscreen.value,
 
             types
+        }
+    }
+
+    _get_stats_for_side(player) {
+        if(player) {
+            return [
+                client.properties.player.team[client.properties.player.party_position.value],
+                client.properties.player.active_pokemon,
+                client.properties.battle.field.player
+            ]
+        }
+        else {
+            return [
+                client.properties.battle.opponent.team[client.properties.battle.opponent.party_position.value],
+                client.properties.battle.opponent.active_pokemon,
+                client.properties.battle.field.opponent
+            ]
         }
     }
 }

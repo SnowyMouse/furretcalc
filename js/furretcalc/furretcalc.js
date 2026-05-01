@@ -16,7 +16,7 @@ import {
     NO_MOVE,
     Weather,
     get_hidden_power_stats,
-    MODIFIER_FOR_STAT
+    MODIFIER_FOR_STAT, StatusCondition
 } from "./util.js";
 
 let loaded = null
@@ -153,8 +153,8 @@ export function calculate_battle_stats(game, out_of_battle_stats, badges, stages
     let { hp, attack, defense, special_attack, special_defense, speed } = out_of_battle_stats
     
     switch(status) {
-        case "BRN": attack = int_divide(attack, 2); break;
-        case "PRZ": speed = int_divide(speed, 4); break;
+        case StatusCondition.BURN: attack = int_divide(attack, 2); break;
+        case StatusCondition.PARALYZE: speed = int_divide(speed, 4); break;
     }
 
     const attack_boost = badges?.[badge_boosts.Attack] ?? false
@@ -162,6 +162,8 @@ export function calculate_battle_stats(game, out_of_battle_stats, badges, stages
     const special_attack_boost = badges?.[badge_boosts.Special] ?? false
     const special_defense_boost = special_attack_boost && receives_special_defense_boost(game, special_attack)
     const speed_boost = badges?.[badge_boosts.Speed] ?? false
+
+    // TODO: do crits in Gen 2 bypass reflect/light screen? if so, those boosts should go here
 
     return {
         hp: Math.max(hp, 1),

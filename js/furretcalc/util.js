@@ -35,8 +35,19 @@ export const Type = Object.freeze({
 })
 
 export const Weather = Object.freeze({
-    SUN: "sun",
-    RAIN: "rain"
+    CLEAR: "Clear",
+    SUN: "Sun",
+    RAIN: "Rain",
+    SANDSTORM: "Sandstorm",
+    HAIL: "Hail"
+})
+
+export const StatusCondition = Object.freeze({
+    PARALYZE: "PRZ",
+    FREEZE: "FRZ",
+    BURN: "BRN",
+    SLEEP: "SLP",
+    POISON: "PSN"
 })
 
 const ALL_TYPES = Object.values(Type);
