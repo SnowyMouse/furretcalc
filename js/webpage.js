@@ -683,7 +683,7 @@ ${select_all_buttons}
     }
 
     if(items_are_supported) {
-        let item_html = `<option value="" selected>None / Other</option>`
+        let item_html = `<option value="None" selected>None / Other</option>`
         for(const [k,v] of Object.entries(furretcalc.get_supported_items(game))) {
             item_html += `<optgroup label="${k}">`
 
@@ -1596,6 +1596,10 @@ function stat_loop() {
                         c.checked = stats.light_screen
                         break
                     }
+                    case "held_item": {
+                        c.value = Object.entries(furretcalc.get_items(game)).find(([_,v]) => v.index === stats.item + 1)?.[0] || "None"
+                        break
+                    }
                 }
             }
         }
@@ -1629,6 +1633,7 @@ class StatGetter {
 
         return {
             species: party_member.species.bytes[0] - 1,
+            item: (active_member.held_item || party_member.held_item).bytes[0] - 1,
 
             moves: [
                 active_member.moves[0].move.bytes[0],
@@ -1709,6 +1714,7 @@ class StatGetterDeprecated {
 
         return {
             species: party_member.species.bytes[0] - 1,
+            item: (active_member.heldItem || party_member.heldItem).bytes[0] - 1,
 
             moves: [
                 active_member.move1.bytes[0],

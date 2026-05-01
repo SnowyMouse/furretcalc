@@ -36,7 +36,7 @@ for l in attributes_asm:
 
         if name == "Teru-Sama" or name == "?":
             continue
-        attributes[name] = { "effect": effect, "parameter": int(param) }
+        attributes[name] = { "effect": effect, "parameter": int(param), "index": index }
 
 with open(args[3], "w") as f:
     j = json.dumps(attributes, indent=4, ensure_ascii=False) + "\n"
