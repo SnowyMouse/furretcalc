@@ -1299,7 +1299,7 @@ function reshow_range() {
             }
         }
 
-        const hp_display = (infos.stats.data.stats.max_hp === infos.stats.data.stats.hp) ? infos.stats.data.stats.max_hp : `${infos.stats.data.stats.hp} / ${infos.stats.data.stats.max_hp}`
+        const hp_display = (infos.stats_opposite.data.stats.max_hp === infos.stats_opposite.data.stats.hp) ? infos.stats_opposite.data.stats.max_hp : `${infos.stats_opposite.data.stats.hp} / ${infos.stats_opposite.data.stats.max_hp}`
 
         return `Lvl. ${infos.stats.data.level} • ${attack} ${attack_name} ${attack_boost_text} ${species_from_name} ${move_name} vs. ${hp_display} HP • ${defense} ${defense_name} ${defense_boost_text} ${species_to_name}: ${infos.displayed_range}${chance_text}`
     }
