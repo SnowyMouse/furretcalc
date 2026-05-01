@@ -153,8 +153,8 @@ export function calculate_battle_stats(game, out_of_battle_stats, badges, stages
     let { hp, attack, defense, special_attack, special_defense, speed } = out_of_battle_stats
     
     switch(status) {
-        case "burned": attack = int_divide(attack, 2); break;
-        case "paralyzed": speed = int_divide(speed, 4); break;
+        case "BRN": attack = int_divide(attack, 2); break;
+        case "PRZ": speed = int_divide(speed, 4); break;
     }
 
     const attack_boost = badges?.[badge_boosts.Attack] ?? false

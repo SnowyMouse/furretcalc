@@ -2,6 +2,8 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<script src="./js/signalr/signalr.min.js"></script>
+<script src="http://localhost:8085/dist/gameHookMapperClient.js"></script>
 <link rel="stylesheet" href="style/style.css" />
 <title>FurretCalc</title>
 </head>
@@ -98,7 +100,10 @@
                 <option value="pvp">Link Battle / Battle Tower</option>
             </select>
         </div>
-        <div class="other_stat_inner"><span class="label">Manual Stat Input</span><div class="checkbox_filler"><input type="checkbox" id="manual_stat_input" /></div></div>
+        <div class="other_stat_inner">
+            <span class="label">Stat Input</span>
+            <select id="stat_input_type" tabindex="10000"></select>
+        </div>
     </div>
 </div>
 

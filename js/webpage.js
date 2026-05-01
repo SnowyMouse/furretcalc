@@ -9,10 +9,12 @@ furretcalc.load_furretcalc("./js/furretcalc")
 let is_calculating = false
 let game = null
 let generation = null
+let manual_stat_input = false
+let auto_sync = false
 
 let debounce_timer = null
 function recalculate() {
-    if(is_calculating) {
+    if(is_calculating || auto_sync) {
         return
     }
 
@@ -392,8 +394,7 @@ function get_stats(is_player) {
         species: null,
         item: null,
         status: null,
-        level: null,
-        manual_stat_input: document.getElementById("manual_stat_input").checked
+        level: null
     }
     let current_hp = ""
     for(const stat of document.querySelectorAll(`${get_stats_box(is_player)} input, ${get_stats_box(is_player)} select`)) {
@@ -443,7 +444,7 @@ function get_stats(is_player) {
         }
     }
 
-    if(!stats.manual_stat_input) {
+    if(!manual_stat_input) {
         const base_stats = furretcalc.get_pokemon(game)[stats.species].base_stats
         stats.stats = furretcalc.util.calculate_monster_stats(stats.level, base_stats, stats.dvs, stats.statexp)
     }
@@ -472,7 +473,7 @@ function quickly_update_stats(is_player) {
     document.querySelector(`${get_stats_box(is_player)} .spd_statexp`).value = stats.statexp["special"]
     document.querySelector(`${get_stats_box(is_player)} .hp_dv`).value = furretcalc.util.calculate_hp_dv(stats.dvs)
 
-    if(!stats.manual_stat_input) {
+    if(!manual_stat_input) {
         document.querySelector(`${get_stats_box(is_player)} .hp_stat`).value = stats.stats.max_hp
         document.querySelector(`${get_stats_box(is_player)} .atk_stat`).value = stats.stats.attack
         document.querySelector(`${get_stats_box(is_player)} .def_stat`).value = stats.stats.defense
@@ -482,7 +483,7 @@ function quickly_update_stats(is_player) {
     }
 }
 
-function set_up_widgets_initial() {
+async function set_up_widgets_initial() {
     document.getElementById("game").innerHTML = `
 <optgroup label="Generation 1">
 <option value="${furretcalc.util.Game.RedBlue}" disabled>Pokémon Red & Blue</option>
@@ -494,6 +495,21 @@ function set_up_widgets_initial() {
 </optgroup>
 `
     document.getElementById("game").addEventListener("input", () => set_up_widgets())
+
+    let stat_input_type_html = ``
+    for(const v of Object.values(StatInputType)) {
+        if(v === StatInputType.AutoSync) {
+            try {
+                await start_auto_sync_loop()
+            } catch(e) {
+                console.warn(`Failed to start auto-sync loop: ${e.message}`, e)
+                stat_input_type_html += `<option disabled>${v} (Not connected: ${e.message})</option>`
+                continue
+            }
+        }
+        stat_input_type_html += `<option value="${v}">${v}</option>`
+    }
+    document.getElementById("stat_input_type").innerHTML = stat_input_type_html
 
     set_up_widgets()
 
@@ -646,9 +662,11 @@ ${select_all_buttons}
     // Fill out all statuses
     for(const status of document.getElementsByClassName("status")) {
         status.innerHTML = `
-        <option value="ok">OK / Other</option>
-        <option value="burned">Burn</option>
-        <option value="paralyzed">Paralysis</option>
+        <option value="OK">OK</option>
+        <option value="BRN">Burn</option>
+        <option value="PRZ">Paralysis</option>
+        <option value="SLP">Asleep</option>
+        <option value="FRZ">Frozen</option>
         `
     }
 
@@ -724,7 +742,7 @@ ${select_all_buttons}
 `
     }
 
-    document.getElementById("manual_stat_input").addEventListener("input", () => update_manual_stat_input())
+    document.getElementById("stat_input_type").addEventListener("input", () => update_stat_input_type())
 
     for(const input of document.querySelectorAll("input")) {
         input.addEventListener("input", recalculate)
@@ -766,23 +784,20 @@ ${select_all_buttons}
     update_typings(false)
 
     refresh_trainer_class_list(game)
-    update_manual_stat_input()
+    update_stat_input_type()
 }
 
-function update_manual_stat_input(is_player) {
-    if(is_player === undefined) {
-        update_manual_stat_input(false)
-        update_manual_stat_input(true)
-        return
-    }
+function update_stat_input_type() {
+    const stat_input_type = document.getElementById(`stat_input_type`).value
+    manual_stat_input = stat_input_type !== StatInputType.Calculate
+    auto_sync = stat_input_type === StatInputType.AutoSync
 
-    const checked = document.getElementById(`manual_stat_input`).checked
-    for(const c of document.querySelectorAll(`${get_stats_box(is_player)} .statexp_column`)) {
-        c.style.display = checked ? "none" : ""
+    for(const c of document.querySelectorAll(`.statexp_column`)) {
+        c.style.display = manual_stat_input ? "none" : ""
     }
-    for(const c of document.querySelectorAll(`${get_stats_box(is_player)} .premultiplied_stat`)) {
-        c.readOnly = !checked
-        c.disabled = !checked
+    for(const c of document.querySelectorAll(`.premultiplied_stat`)) {
+        c.readOnly = !manual_stat_input
+        c.disabled = !manual_stat_input
     }
 }
 
@@ -1051,7 +1066,7 @@ function refresh_trainer_pokemon_data() {
             case "item": element.value = selection.item; break;
             case "level": element.value = selection.level; break;
             case "friendship": element.value = 0; break;
-            case "status": element.value = "ok"; break;
+            case "status": element.value = "OK"; break;
 
             case "move_1": element.value = selection.moves[0]; break;
             case "move_2": element.value = selection.moves[1]; break;
@@ -1372,4 +1387,257 @@ function evaluate(starting_value, expression) {
     } 
 
     return Math.max(Math.min(Math.round(current_value), starting_value), 1)
+}
+
+const StatInputType = {
+    Calculate: "Calculate",
+    Manual: "Manual",
+    AutoSync: "Auto-Sync"
+}
+
+let client = null
+let stat_getter = null
+
+async function start_auto_sync_loop() {
+    try {
+        client = new GameHookMapperClient();
+        await client.connect()
+    } catch(e) {
+        throw new Error("Failed to instantiate client")
+    }
+
+    window.gamehook = client
+
+    const generation = client.properties.meta.generation
+    if(generation == null) {
+        // TODO
+        throw new Error("Unsupported mapper (deprecated mapper not supported yet - hang tight!)")
+    }
+
+    switch(generation.value) {
+        case "1": throw new Error("Gen 1 is not supported yet")
+        case "2": {
+            stat_getter = new StatGetter(client)
+            break
+        }
+        default: throw new Error(`Unsupported generation ${generation.value}`)
+    }
+
+    setInterval(stat_loop, 1000)
+}
+
+function stat_loop() {
+    if(!auto_sync) {
+        return
+    }
+
+    const all_moves = Object.keys(furretcalc.get_moves(game))
+    const all_species = Object.keys(furretcalc.get_pokemon(game))
+
+    const badges = stat_getter.get_badges()
+    for(const b in badges) {
+        document.getElementById(`badge_${b}`).checked = badges[b]
+    }
+
+
+    function update_stats(is_player) {
+        const stats = stat_getter.get_stats(is_player)
+        const box = get_stats_box(is_player)
+
+        for(const c of document.querySelectorAll(`${box} *`)) {
+            for(const cl of c.classList) {
+                switch(cl) {
+                    case "hp_stat": {
+                        c.value = stats.max_hp
+                        break
+                    }
+                    case "current_hp": {
+                        c.value = stats.hp
+                        break
+                    }
+                    case "atk_dv": {
+                        c.value = stats.attack_dv
+                        break
+                    }
+                    case "def_dv": {
+                        c.value = stats.defense_dv
+                        break
+                    }
+                    case "spd_dv":
+                    case "spa_dv": {
+                        c.value = stats.special_dv
+                        break
+                    }
+                    case "spe_dv": {
+                        c.value = stats.speed_dv
+                        break
+                    }
+                    case "atk_stat": {
+                        c.value = stats.attack
+                        break
+                    }
+                    case "def_stat": {
+                        c.value = stats.defense
+                        break
+                    }
+                    case "spa_stat": {
+                        c.value = stats.special_attack
+                        break
+                    }
+                    case "spd_stat": {
+                        c.value = stats.special_defense
+                        break
+                    }
+                    case "spe_stat": {
+                        c.value = stats.speed
+                        break
+                    }
+                    case "level": {
+                        c.value = stats.level
+                        break
+                    }
+                    case "atk_stage": {
+                        c.value = stats.attack_stage
+                        break
+                    }
+                    case "def_stage": {
+                        c.value = stats.defense_stage
+                        break
+                    }
+                    case "spa_stage": {
+                        c.value = stats.special_attack_stage
+                        break
+                    }
+                    case "spd_stage": {
+                        c.value = stats.special_defense_stage
+                        break
+                    }
+                    case "spe_stage": {
+                        c.value = stats.speed_stage
+                        break
+                    }
+                    case "acc_stage": {
+                        c.value = stats.accuracy_stage
+                        break
+                    }
+                    case "eva_stage": {
+                        c.value = stats.evasion_stage
+                        break
+                    }
+                    case "type_primary": {
+                        c.value = stats.types[0]
+                        break
+                    }
+                    case "type_secondary": {
+                        c.value = stats.types[1]
+                        break
+                    }
+                    case "friendship": {
+                        c.value = stats.friendship
+                        break
+                    }
+                    case "move_1": {
+                        c.value = all_moves[stats.moves[0]]
+                        break
+                    }
+                    case "move_2": {
+                        c.value = all_moves[stats.moves[1]]
+                        break
+                    }
+                    case "move_3": {
+                        c.value = all_moves[stats.moves[2]]
+                        break
+                    }
+                    case "move_4": {
+                        c.value = all_moves[stats.moves[3]]
+                        break
+                    }
+                    case "species": {
+                        c.value = all_species[stats.species]
+                        break
+                    }
+                    case "status": {
+                        c.value = stats.status || "OK"
+                        break
+                    }
+                }
+            }
+        }
+    }
+
+    update_stats(false)
+    update_stats(true)
+
+    actually_recalculate()
+}
+
+class StatGetter {
+    get_out_of_battle_party_member(player) {
+        if(player) {
+            return [
+                client.properties.player.team[client.properties.player.party_position.value],
+                client.properties.player.active_pokemon
+            ]
+        }
+        else {
+            return [
+                client.properties.battle.opponent.team[client.properties.battle.opponent.party_position.value],
+                client.properties.battle.opponent.active_pokemon
+            ]
+        }
+    }
+
+    get_badges() {
+        return client.properties.player.badges.map((badge) => badge.value)
+    }
+
+    get_stats(player) {
+        const [party_member, active_member] = this.get_out_of_battle_party_member(player)
+        const types = [
+            active_member.type_1.value.toUpperCase(),
+            active_member.type_2.value.toUpperCase(),
+        ]
+
+        if(types[1] === types[0]) {
+            types[1] = "None"
+        }
+
+        return {
+            species: party_member.species.bytes[0] - 1,
+
+            moves: [
+                active_member.moves[0].move.bytes[0],
+                active_member.moves[1].move.bytes[0],
+                active_member.moves[2].move.bytes[0],
+                active_member.moves[3].move.bytes[0]
+            ],
+            level: party_member.level.value,
+            hp: active_member.stats.hp.value,
+            max_hp: party_member.stats.hp_max.value,
+            status: party_member.status_condition.value,
+
+            attack: party_member.stats.attack.value,
+            defense: party_member.stats.defense.value,
+            special_attack: party_member.stats.special_attack.value,
+            special_defense: party_member.stats.special_defense.value,
+            speed: party_member.stats.speed.value,
+
+            attack_dv: party_member.ivs.attack.value,
+            defense_dv: party_member.ivs.defense.value,
+            special_dv: party_member.ivs.special.value,
+            speed_dv: party_member.ivs.speed.value,
+
+            friendship: party_member.friendship.value,
+
+            attack_stage: active_member.modifiers.attack.value,
+            defense_stage: active_member.modifiers.defense.value,
+            special_attack_stage: active_member.modifiers.special_attack.value,
+            special_defense_stage: active_member.modifiers.special_defense.value,
+            speed_stage: active_member.modifiers.speed.value,
+            accuracy_stage: active_member.modifiers.accuracy.value,
+            evasion_stage: active_member.modifiers.evasion.value,
+
+            types
+        }
+    }
 }
