@@ -1172,7 +1172,7 @@ function show_range(info_index) {
 function reshow_range() {
     function stat_stage_to_string(stage) {
         if(stage < 0) {
-            return `-${stage}`
+            return `${stage}` // the minus is already there
         }
         if(stage > 0) {
             return `+${stage}`
@@ -1299,7 +1299,9 @@ function reshow_range() {
             }
         }
 
-        return `Lvl. ${infos.stats.data.level} / ${attack} ${attack_name} ${attack_boost_text} ${species_from_name} ${move_name} vs. ${infos.stats.data.stats.hp} HP / ${defense} ${defense_name} ${defense_boost_text} ${species_to_name}: ${infos.displayed_range}${chance_text}`
+        const hp_display = (infos.stats.data.stats.max_hp === infos.stats.data.stats.hp) ? infos.stats.data.stats.max_hp : `${infos.stats.data.stats.hp} / ${infos.stats.data.stats.max_hp}`
+
+        return `Lvl. ${infos.stats.data.level} • ${attack} ${attack_name} ${attack_boost_text} ${species_from_name} ${move_name} vs. ${hp_display} HP • ${defense} ${defense_name} ${defense_boost_text} ${species_to_name}: ${infos.displayed_range}${chance_text}`
     }
 
     const fifty_fifty = format_chance_text(0.5)
