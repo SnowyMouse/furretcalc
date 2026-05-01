@@ -814,6 +814,8 @@ function get_attack_and_defense_stat(game, generation, move_data, attacker, defe
                 stats = { attack: attacker.stats.special_attack, defense: defender.stats.special_defense, attack_crit: attacker.data.stats.special_attack, defense_crit: defender.data.stats.special_defense }
             }
 
+            // TODO: screens
+
             make_stats_u8_all(stats)
 
             return [
@@ -831,6 +833,11 @@ function get_attack_and_defense_stat(game, generation, move_data, attacker, defe
             }
             else {
                 stats = { attack: attacker.stats.special_attack, defense: defender.stats.special_defense, attack_crit: crit_special_reuse_stat ? attacker.stats.special_attack : attacker.data.stats.special_attack, defense_crit: crit_special_reuse_stat ? defender.stats.special_defense : defender.data.stats.special_defense }
+            }
+
+            if(defender.data.screens[is_physical ? "reflect" : "light_screen"]) {
+                stats.defense = (stats.defense * 2) & 65535
+                stats.defense_crit = (stats.defense_crit * 2) & 65535
             }
 
             make_stats_u8_all(stats)

@@ -390,6 +390,10 @@ function get_stats(is_player) {
         statexp: {},
         stages: {},
         types: [null, null],
+        screens: {
+            reflect: false,
+            light_screen: false
+        },
         moves: ["NO_MOVE", "NO_MOVE", "NO_MOVE", "NO_MOVE"],
         species: null,
         item: null,
@@ -437,6 +441,9 @@ function get_stats(is_player) {
                 case "friendship": stats.friendship = stat.value; break;
                 case "level": stats.level = parse_int_clamped(stat.value, 0, 255); break;
                 case "current_hp": current_hp = stat.value; break;
+
+                case "reflect": stats.screens.reflect = stat.checked; break;
+                case "light_screen": stats.screens.light_screen = stat.checked; break;
 
                 case "type_primary": stats.types[0] = furretcalc.util.Type[stat.value]; break;
                 case "type_secondary": stats.types[1] = furretcalc.util.Type[stat.value]; break;
@@ -596,10 +603,16 @@ function set_up_widgets() {
         ${items_are_supported ? `<div class="other_stat_inner"><span class="label">Held Item</span><select class="held_item" tabindex="${misc_tabs}"></select></div>` : ``}
     </div>
     <div class="other_stats">
-        <div class="other_stat_inner"><span class="label">Type 1</span><select class="type_primary typing" tabindex="${misc_tabs}"></select></div>
-        <div class="other_stat_inner"><span class="label">Type 2</span><select class="type_secondary typing" tabindex="${misc_tabs}"></select></div>
+        <div class="other_stat_inner"><span class="label">Level</span><input type="text" class="level" value="0" tabindex="${misc_tabs}" /></div>
+        <div class="other_stat_inner"><span class="label">Friendship</span><input type="text" class="friendship" value="0" tabindex="${misc_tabs}" /></div>
         <div class="other_stat_inner"><span class="label">Status</span><select class="status" tabindex="${misc_tabs}"></select></div>
         <div class="other_stat_inner"><span class="label">Current HP</span><input type="text" class="current_hp" title="This can be a percentage (e.g. 100%), pixels (e.g. 48px), or a raw HP amount (e.g. 123).\n\nYou can also type a simple addition/subtraction expression (e.g. '100%-5' or '-5' or '-3-2' for max HP minus 5)." placeholder="100%" /></div>
+    </div>
+    <div class="other_stats">
+        <div class="other_stat_inner"><span class="label">Type 1</span><select class="type_primary typing" tabindex="${misc_tabs}"></select></div>
+        <div class="other_stat_inner"><span class="label">Type 2</span><select class="type_secondary typing" tabindex="${misc_tabs}"></select></div>
+        <div class="other_stat_inner"><span class="label">Accuracy</span><select class="acc_stage stat_stage" tabindex="${misc_tabs}"></select></div>
+        <div class="other_stat_inner"><span class="label">Evasion</span><select class="eva_stage stat_stage" tabindex="${misc_tabs}"></select></div>
     </div>
     <div class="other_stats">
         <div class="other_stat_inner"><span class="label">Move #1</span><select class="move_1 move" tabindex="${misc_tabs}"></select></div>
@@ -608,10 +621,8 @@ function set_up_widgets() {
         <div class="other_stat_inner"><span class="label">Move #4</span><select class="move_4 move" tabindex="${misc_tabs}"></select></div>
     </div>
     <div class="other_stats">
-        <div class="other_stat_inner"><span class="label">Level</span><input type="text" class="level" value="0" tabindex="${misc_tabs}" /></div>
-        <div class="other_stat_inner"><span class="label">Friendship</span><input type="text" class="friendship" value="0" tabindex="${misc_tabs}" /></div>
-        <div class="other_stat_inner"><span class="label">Accuracy</span><select class="acc_stage stat_stage" tabindex="${misc_tabs}"></select></div>
-        <div class="other_stat_inner"><span class="label">Evasion</span><select class="eva_stage stat_stage" tabindex="${misc_tabs}"></select></div>
+        <div class="other_stat_inner"><span class="label">Reflect</span><div class="checkbox_filler"><input type="checkbox" class="reflect" /></div></div>
+        <div class="other_stat_inner"><span class="label">Light Screen</span><div class="checkbox_filler"><input type="checkbox" class="light_screen" /></div></div>
     </div>
         `
 
@@ -1560,6 +1571,14 @@ function stat_loop() {
                         c.value = stats.status || "OK"
                         break
                     }
+                    case "reflect": {
+                        c.checked = stats.reflect
+                        break
+                    }
+                    case "light_screen": {
+                        c.checked = stats.light_screen
+                        break
+                    }
                 }
             }
         }
@@ -1576,13 +1595,15 @@ class StatGetter {
         if(player) {
             return [
                 client.properties.player.team[client.properties.player.party_position.value],
-                client.properties.player.active_pokemon
+                client.properties.player.active_pokemon,
+                client.properties.battle.field.player
             ]
         }
         else {
             return [
                 client.properties.battle.opponent.team[client.properties.battle.opponent.party_position.value],
-                client.properties.battle.opponent.active_pokemon
+                client.properties.battle.opponent.active_pokemon,
+                client.properties.battle.field.opponent
             ]
         }
     }
@@ -1592,7 +1613,7 @@ class StatGetter {
     }
 
     get_stats(player) {
-        const [party_member, active_member] = this.get_out_of_battle_party_member(player)
+        const [party_member, active_member, field] = this.get_out_of_battle_party_member(player)
         const types = [
             active_member.type_1.value.toUpperCase(),
             active_member.type_2.value.toUpperCase(),
@@ -1636,6 +1657,9 @@ class StatGetter {
             speed_stage: active_member.modifiers.speed.value,
             accuracy_stage: active_member.modifiers.accuracy.value,
             evasion_stage: active_member.modifiers.evasion.value,
+
+            reflect: field.reflect.value,
+            light_screen: field.lightscreen.value,
 
             types
         }
