@@ -503,6 +503,9 @@ function set_up_widgets() {
     game = get_current_game()
     generation = generation_of_game(game)
 
+    const supported_items = Object.entries(furretcalc.get_supported_items(game))
+    const items_are_supported = supported_items.length > 0
+
     let tabindex = 1
 
     // Add in stat placeholder stuff
@@ -574,7 +577,7 @@ function set_up_widgets() {
     </table>
     <div class="other_stats">
         <div class="other_stat_inner"><span class="label">Species</span><select class="species" tabindex="${misc_tabs}"></select></div>
-        ${generation !== Generation.Gen1 ? `<div class="other_stat_inner"><span class="label">Held Item</span><select class="held_item" tabindex="${misc_tabs}"></select></div>` : ``}
+        ${items_are_supported ? `<div class="other_stat_inner"><span class="label">Held Item</span><select class="held_item" tabindex="${misc_tabs}"></select></div>` : ``}
     </div>
     <div class="other_stats">
         <div class="other_stat_inner"><span class="label">Type 1</span><select class="type_primary typing" tabindex="${misc_tabs}"></select></div>
@@ -649,19 +652,21 @@ ${select_all_buttons}
         `
     }
 
-    let item_html = `<option value="" selected>None / Other</option>`
-    for(const [k,v] of Object.entries(furretcalc.get_supported_items(game))) {
-        item_html += `<optgroup label="${k}">`
+    if(items_are_supported) {
+        let item_html = `<option value="" selected>None / Other</option>`
+        for(const [k,v] of Object.entries(furretcalc.get_supported_items(game))) {
+            item_html += `<optgroup label="${k}">`
 
-        for (const item of v) {
-            item_html += `<option value="${item}">${item}</option>`
+            for (const item of v) {
+                item_html += `<option value="${item}">${item}</option>`
+            }
+
+            item_html += "</optgroup>"
         }
 
-        item_html += "</optgroup>"
-    }
-
-    for(const status of document.getElementsByClassName("held_item")) {
-        status.innerHTML = item_html
+        for(const status of document.getElementsByClassName("held_item")) {
+            status.innerHTML = item_html
+        }
     }
 
     let typing_html = "<option selected>None</option>"
