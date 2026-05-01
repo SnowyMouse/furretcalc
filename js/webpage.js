@@ -1406,7 +1406,7 @@ function evaluate(starting_value, expression) {
 const StatInputType = {
     Calculate: "Calculate",
     Manual: "Manual",
-    AutoSync: "Auto-Sync"
+    AutoSync: "Auto-Sync",
 }
 
 let client = null
@@ -1424,17 +1424,29 @@ async function start_auto_sync_loop() {
 
     const generation = client.properties.meta.generation
     if(generation == null) {
-        // TODO
-        throw new Error("Unsupported mapper (deprecated mapper not supported yet - hang tight!)")
+        throw new Error("Mapper is missing properties (unsupported mapper)")
     }
 
-    switch(generation.value) {
-        case "1": throw new Error("Gen 1 is not supported yet")
-        case "2": {
-            stat_getter = new StatGetter(client)
-            break
+    const mapper_type = client.properties.meta.mapperType
+    if(mapper_type != null && mapper_type.value === "Deprecated") {
+        switch(generation.value) {
+            case "1": throw new Error("Gen 1 is not supported yet")
+            case "2": {
+                stat_getter = new StatGetterDeprecated(client)
+                break
+            }
+            default: throw new Error(`Unsupported generation ${generation.value}`)
         }
-        default: throw new Error(`Unsupported generation ${generation.value}`)
+    }
+    else {
+        switch(generation.value) {
+            case "1": throw new Error("Gen 1 is not supported yet")
+            case "2": {
+                stat_getter = new StatGetter(client)
+                break
+            }
+            default: throw new Error(`Unsupported generation ${generation.value}`)
+        }
     }
 
     setInterval(stat_loop, 1000)
@@ -1670,6 +1682,86 @@ class StatGetter {
                 client.properties.battle.opponent.team[client.properties.battle.opponent.party_position.value],
                 client.properties.battle.opponent.active_pokemon,
                 client.properties.battle.field.opponent
+            ]
+        }
+    }
+}
+
+class StatGetterDeprecated {
+    get_weather() {
+        return client.properties.battle.weather.weatherType.value
+    }
+
+    get_badges() {
+        return Object.values(client.properties.player.badges).map((badge) => badge.value)
+    }
+
+    get_stats(player) {
+        const [party_member, active_member, field] = this._get_stats_for_side(player)
+        const types = [
+            active_member.type1.value.toUpperCase(),
+            active_member.type2.value.toUpperCase(),
+        ]
+
+        if(types[1] === types[0]) {
+            types[1] = "None"
+        }
+
+        return {
+            species: party_member.species.bytes[0] - 1,
+
+            moves: [
+                active_member.move1.bytes[0],
+                active_member.move2.bytes[0],
+                active_member.move3.bytes[0],
+                active_member.move4.bytes[0]
+            ],
+            level: party_member.level.value,
+            hp: active_member.hp.value,
+            max_hp: party_member.maxHp.value,
+            status: party_member.statusCondition.value,
+
+            attack: party_member.attack.value,
+            defense: party_member.defense.value,
+            special_attack: party_member.specialAttack.value,
+            special_defense: party_member.specialDefense.value,
+            speed: party_member.speed.value,
+
+            attack_dv: party_member.dvAttack.value,
+            defense_dv: party_member.dvDefense.value,
+            special_dv: party_member.dvSpecial.value,
+            speed_dv: party_member.dvSpeed.value,
+
+            friendship: party_member.friendship.value,
+
+            attack_stage: active_member.modStageAttack.value,
+            defense_stage: active_member.modStageDefense.value,
+            special_attack_stage: active_member.modStageSpecialAttack.value,
+            special_defense_stage: active_member.modStageSpecialDefense.value,
+            speed_stage: active_member.modStageSpeed.value,
+            accuracy_stage: active_member.modStageAccuracy.value,
+            evasion_stage: active_member.modStageEvasion.value,
+
+            reflect: field.statusReflect.value,
+            light_screen: field.statusLightScreen.value,
+
+            types
+        }
+    }
+
+    _get_stats_for_side(player) {
+        if(player) {
+            return [
+                client.properties.player.team[client.properties.battle.yourPokemon.partyPos.value],
+                client.properties.battle.yourPokemon,
+                client.properties.battle.field.player
+            ]
+        }
+        else {
+            return [
+                client.properties.battle.trainer.team[client.properties.battle.enemyPokemon.partyPos.value],
+                client.properties.battle.enemyPokemon,
+                client.properties.battle.field.enemy
             ]
         }
     }
