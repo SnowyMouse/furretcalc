@@ -46,10 +46,23 @@ export async function load_gen2(base_url) {
     }
 }
 
-export function calculate_damage(move_data, attacker, stats, is_crit, move_type, defender, weather) {
+export function calculate_max_damage(move_data, attacker, stats, is_crit, move_type, defender, weather) {
+    if(move_data.effect === "EFFECT_OHKO") {
+        // OHKO moves just check type effectiveness without doing any other damage calculation
+        if(apply_defensive_type_effectiveness(move_data, 1, defender) > 0) {
+            return 65535
+        }
+        else {
+            return 0
+        }
+    }
+
     let total_damage = calculate_damage_subtotal(move_data, attacker, stats, is_crit)
-    total_damage = apply_type_effectiveness(move_type, total_damage, move_data, attacker, defender, weather)
-    return total_damage
+    if(total_damage === 0) {
+        return 0
+    }
+
+    return apply_type_effectiveness(move_type, total_damage, move_data, attacker, defender, weather)
 }
 
 export const EFFECT_TO_TYPE_BOOST = Object.freeze({
@@ -80,9 +93,20 @@ const ITEM_GROUPS_DEFINITION = Object.freeze({
 })
 
 export function calculate_damage_subtotal(move_data, attacker, stats, is_crit) {
-    const attack = stats.attack & 65535
-    const defense = stats.defense & 65535
     let level = attacker.data.level & 255
+
+    if(move_data.base_power === 0 && move_data.effect !== "EFFECT_MULTI_HIT" && move_data.effect !== "EFFECT_CONVERSION") {
+        return 0
+    }
+
+    const attack = stats.attack & 65535
+    let defense = stats.defense & 65535
+
+    if(move_data.effect === "EFFECT_SELFDESTRUCT") {
+        defense = int_divide(defense, 2) // (effectively doubles base power)
+    }
+
+    defense = Math.max(defense, 1) // prevent division by 0
 
     const total_power = (int_divide(2 * (level & 255), 5) + 2) * move_data.base_power * attack
     let total_damage = int_divide(int_divide(total_power, defense), 50)
@@ -319,15 +343,23 @@ export function apply_type_effectiveness(move_type, total_damage, move_data, att
         total_damage = Math.max(int_divide(total_damage, 2), 1)
     }
 
+    total_damage = total_damage & 65535
+
     const badge_boost_index = TypeBadgeBoostIndex[move_data.type]
     if(badge_boost_index != null && attacker.badges?.[badge_boost_index]) {
-        total_damage += int_divide(total_damage, 8)
+        total_damage = Math.min(total_damage + int_divide(total_damage, 8), 65535)
     }
 
     if(attacker.data.types.includes(move_data.type)) {
-        total_damage += int_divide(total_damage, 2)
+        total_damage = (total_damage + int_divide(total_damage, 2)) & 65535
     }
 
+    total_damage = apply_defensive_type_effectiveness(move_data, total_damage, defender)
+
+    return total_damage
+}
+
+function apply_defensive_type_effectiveness(move_data, total_damage, defender) {
     for(const t of defender.data.types) {
         const type_effectiveness = TYPE_EFFECTIVENESS[t]
         if(type_effectiveness == null) {
@@ -337,13 +369,12 @@ export function apply_type_effectiveness(move_type, total_damage, move_data, att
             return 0
         }
         if(type_effectiveness.weaknesses?.includes(move_data.type)) {
-            total_damage = Math.max(int_divide(total_damage * 20, 10), 1)
+            total_damage = Math.max(int_divide(total_damage * 20, 10), 1) & 65535
         }
         if(type_effectiveness.resistances?.includes(move_data.type)) {
-            total_damage = Math.max(int_divide(total_damage * 5, 10), 1)
+            total_damage = Math.max(int_divide(total_damage * 5, 10), 1) & 65535
         }
     }
-
     return total_damage
 }
 

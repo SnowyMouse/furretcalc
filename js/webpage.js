@@ -1077,7 +1077,7 @@ function refresh_trainer_pokemon_data() {
             case "species": element.value = selection.species; break;
             case "item": element.value = selection.item; break;
             case "level": element.value = selection.level; break;
-            case "friendship": element.value = 0; break;
+            case "friendship": element.value = 70; break;
             case "status": element.value = "OK"; break;
 
             case "move_1": element.value = selection.moves[0]; break;

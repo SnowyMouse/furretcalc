@@ -204,16 +204,19 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
     const move_data = { ...move_data_original }
     apply_move_modifications(move_data, attacker)
 
-    if(move_data.base_power === 0 && move_data.effect !== "EFFECT_OHKO") {
-        return null
-    }
-
     const [noncrit_stats, crit_stats] = get_attack_and_defense_stat(game, generation, move_data, attacker, defender)
-
     const noncrit_damage = calculate_max_damage_for_move_with_stats(generation, move_type, move_data, attacker, defender, noncrit_stats, false, weather)
 
     if(noncrit_damage === 0) {
         return null
+    }
+
+    if(typeof noncrit_damage === "string") {
+        return noncrit_damage
+    }
+
+    if(!isFinite(noncrit_damage)) {
+        return "Error (invalid damage returned - please report this)"
     }
 
     const return_value = {
@@ -751,7 +754,7 @@ function calculate_max_damage_for_move_with_stats(generation, move_type, move_da
         case Generation.Gen1:
             throw new Error("TODO: gen1 damage")
         case Generation.Gen2:
-            return gen2.calculate_damage(move_data, attacker, stats, is_crit, move_type, defender, weather)
+            return gen2.calculate_max_damage(move_data, attacker, stats, is_crit, move_type, defender, weather)
         default:
             unreachable()
 
