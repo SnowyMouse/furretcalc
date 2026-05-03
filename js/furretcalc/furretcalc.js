@@ -318,7 +318,8 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
         max_turns,
         max_rolls,
         per_hit,
-        accuracy
+        accuracy,
+        0
     )
 
     return_value.rolls.accuracy = accuracy
@@ -357,11 +358,6 @@ function adjust_turn_chances_for_move({move_data, weather, return_value}) {
                 return_value.turn_chances.splice(i, 0, 0, 0)
             }
             break
-
-        case "EFFECT_ROLLOUT":
-        case "EFFECT_FURY_CUTTER": {
-            return_value.per_hit = true
-        }
     }
 
 }
@@ -623,11 +619,11 @@ function combine_rolls(rolls, defender) {
     return new_rolls
 }
 
-function calculate_damage_rolls_against_hp(move_data, starting_hp, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy) {
+function calculate_damage_rolls_against_hp(move_data, starting_hp, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy, starting_successful_moves_in_a_row) {
     const rolls = return_value.rolls.rolls
 
-    if(move_data.effect === "EFFECT_HYPER_BEAM") {
-        calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rolls, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy)
+    if(move_data.effect === "EFFECT_HYPER_BEAM" || move_data.effect === "EFFECT_FURY_CUTTER" || move_data.effect === "EFFECT_ROLLOUT") {
+        calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rolls, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy, starting_successful_moves_in_a_row)
         return
     }
 
@@ -686,7 +682,7 @@ function calculate_damage_rolls_against_hp(move_data, starting_hp, return_value,
     }
 }
 
-function calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rolls, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy) {
+function calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rolls, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy, starting_successful_moves_in_a_row) {
     // A slower, recursive approach for move effects difficult to figure out linearly
 
     const must_recharge = !per_hit && move_data.effect === "EFFECT_HYPER_BEAM"
@@ -697,15 +693,29 @@ function calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rol
         chances.push(0)
     }
 
-    const success_increment = must_recharge ? 2 : 1
-
-    function inner(remaining_hp, turn_index, current_universe_chance) {
+    function inner(remaining_hp, turn_index, current_universe_chance, successful_moves_in_a_row) {
         if(chances[turn_index] == null) {
             return
         }
 
+        successful_moves_in_a_row = successful_moves_in_a_row & 255
+
+        if(successful_moves_in_a_row > 0 && must_recharge) {
+            // recharge turn
+            return inner(remaining_hp, turn_index + 1, current_universe_chance, 0)
+        }
+
+        let multiplier = 1
+        if(successful_moves_in_a_row > 4 && move_data.effect === "EFFECT_ROLLOUT") {
+            successful_moves_in_a_row = 0
+        }
+
+        if(move_data.effect === "EFFECT_FURY_CUTTER" || move_data.effect === "EFFECT_ROLLOUT") {
+            multiplier = 1 << Math.min(successful_moves_in_a_row, 4)
+        }
+
         for(const [damage, chance] of rolls) {
-            const remaining_hp_after_damage = remaining_hp - damage
+            const remaining_hp_after_damage = remaining_hp - damage * multiplier
             const total_probability = current_universe_chance * chance * accuracy
 
             if(remaining_hp_after_damage < 1) {
@@ -715,16 +725,16 @@ function calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rol
                 continue
             }
 
-            inner(remaining_hp_after_damage, turn_index + success_increment, total_probability)
+            inner(remaining_hp_after_damage, turn_index + 1, total_probability, successful_moves_in_a_row + 1)
         }
 
         // But what if we miss?
         if(accuracy < 1.0) {
-            inner(remaining_hp, turn_index + 1, current_universe_chance * (1.0 - accuracy))
+            inner(remaining_hp, turn_index + 1, current_universe_chance * (1.0 - accuracy), 0)
         }
     }
 
-    inner(starting_hp, 0, 1)
+    inner(starting_hp, 0, 1, starting_successful_moves_in_a_row)
 
     for(let v of chances) {
         if(v < 0.000001) {

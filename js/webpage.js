@@ -330,14 +330,18 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
                 suggestions["beat_up_note"] = `Beat Up is <u title="${QUASI_TYPELESS_NOTE}">Quasi-Typeless</u>.`
                 suggestions["beat_up_ttk_note"] = `Beat Up damage does not account for any party members.`
                 break
-            case "EFFECT_ROLLOUT":
-                suggestions["rollout_wip"] = `Rollout is not yet implemented. Damage displayed is only for the first hit.`
-                break
-            case "EFFECT_FURY_CUTTER":
-                suggestions["fury_cutter_wip"] = `Fury Cutter is not yet implemented. Damage displayed is only for the first hit.`
-                break
             case "EFFECT_PRESENT":
                 suggestions["present_wip"] = `Present is not yet implemented.`
+                break
+            case "EFFECT_FURY_CUTTER":
+                if(moves[index].properties.per_hit) {
+                    suggestions["fury_cutter_per_hit"] = `Fury Cutter is calculated with its starting power when calculating per-hit.`
+                }
+                break
+            case "EFFECT_ROLLOUT":
+                if(moves[index].properties.per_hit) {
+                    suggestions["rollout_per_hit"] = `Rollout is calculated with its starting power when calculating per-hit.`
+                }
                 break
         }
     }
@@ -1170,12 +1174,12 @@ function show_range(info_index) {
 }
 
 function reshow_range() {
-    function stat_stage_to_string(stage) {
+    function stat_stage_to_string(stage, stat_name) {
         if(stage < 0) {
-            return `${stage}` // the minus is already there
+            return `${stage} ${stat_name}` // the minus is already there
         }
         if(stage > 0) {
-            return `+${stage}`
+            return `+${stage} ${stat_name}`
         }
         return ""
     }
@@ -1212,8 +1216,8 @@ function reshow_range() {
         defense_name = "DEF"
         attack = infos.stats.data.stats.attack
         defense = infos.stats_opposite.data.stats.defense
-        attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.attack))
-        defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.defense))
+        attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.attack, attack_name))
+        defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.defense, defense_name))
 
         attack_boost = infos.stats.badges?.[badge_boosts.Attack] ?? false
         defense_boost = infos.stats_opposite.badges?.[badge_boosts.Defense] ?? false
@@ -1223,8 +1227,8 @@ function reshow_range() {
         defense_name = generation === Generation.Gen1 ? "SPD" : "SPA"
         attack = infos.stats.data.stats.special_attack
         defense = infos.stats_opposite.data.stats.special_defense
-        attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.special_attack))
-        defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.special_defense))
+        attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.special_attack, attack_name))
+        defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.special_defense, defense_name))
 
         attack_boost = infos.stats.badges?.[badge_boosts.Special] ?? false
         defense_boost = (infos.stats_opposite.badges?.[badge_boosts.Special] ?? false) && furretcalc.receives_special_defense_boost(game, infos.stats_opposite.data.stats.special_attack)
@@ -1236,6 +1240,9 @@ function reshow_range() {
     if(defense_boost) {
         defense_boost_info.push(`+${defense_name}`)
     }
+
+    attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.accuracy, "ACC"))
+    defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.evasion, "EVA"))
 
     const badge_boost_index = furretcalc.get_type_badge_boost_badges(game)[infos.data.move_data.type]
     if(badge_boost_index != null && infos.stats.badges?.[badge_boost_index]) {
