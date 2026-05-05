@@ -202,7 +202,7 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
 
     let { per_hit, weather, max_rolls, max_turns, cutoff } = properties
     const move_data = { ...move_data_original }
-    apply_move_modifications(move_data, attacker)
+    apply_move_modifications(game, move_data, attacker, defender)
 
     const [noncrit_stats, crit_stats] = get_attack_and_defense_stat(game, generation, move_data, attacker, defender)
     const noncrit_damage = calculate_max_damage_for_move_with_stats(generation, move_type, move_data, attacker, defender, noncrit_stats, false, weather)
@@ -230,20 +230,67 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
     const crit_damage = calculate_max_damage_for_move_with_stats(generation, move_type, move_data, attacker, defender, crit_stats, true, weather)
     const crit_rate = get_crit_chance({move_data, move_type, attacker})
 
-    const roll_generator = (multiplier) => generate_rolls_for_move({
-        move_type,
-        move_data,
-        noncrit_damage: Math.max(Math.floor(noncrit_damage * multiplier), 1),
-        crit_damage: Math.max(Math.floor(crit_damage * multiplier), 1),
-        attacker,
-        defender,
-        per_hit,
-        warnings,
-        weather,
-        crit_rate
-    })
+    const roll_generator = (multiplier, noncrit_damage_override = noncrit_damage, crit_damage_override = crit_damage) => {
+        return generate_rolls_for_move({
+            move_type,
+            move_data,
+            noncrit_damage: Math.max(Math.floor(noncrit_damage_override * multiplier), 1),
+            crit_damage: Math.max(Math.floor(crit_damage_override * multiplier), 1),
+            attacker,
+            defender,
+            per_hit,
+            warnings,
+            weather,
+            crit_rate
+        })
+    }
 
-    return_value.rolls = roll_generator(1.0)
+    if(move_data.effect === "EFFECT_PRESENT") {
+        const calculate_damage_with_base_power = (base_power, is_crit) => {
+            return calculate_max_damage_for_move_with_stats(generation, move_type, { ...move_data, base_power }, attacker, defender, is_crit ? crit_stats : noncrit_stats, is_crit, weather)
+        }
+
+        const calculate_rolls = (base_power, odds) => {
+            const noncrit_damage = calculate_damage_with_base_power(base_power, false)
+            const crit_damage = calculate_damage_with_base_power(base_power, true)
+            const rolls = roll_generator(1.0, noncrit_damage, crit_damage)
+
+            for(const c of rolls.rolls) {
+                c[1] *= odds
+            }
+
+            return rolls
+        }
+
+        const bp_40 = calculate_rolls(40, 102/256).rolls
+        const bp_80 = calculate_rolls(80, 76/256).rolls
+        const bp_120 = calculate_rolls(120, 26/256).rolls
+        const heal_amount = -int_divide(defender.data.stats.max_hp, 4)
+        const all_rolls = [...bp_40, ...bp_80, ...bp_120, [heal_amount, 0.25]]
+        const base_high = calculate_damage_with_base_power(120, false)
+
+        let average = 0
+
+        for(const i of all_rolls) {
+            average += i[0] * i[1]
+            i[0] = Math.min(i[0], defender.data.stats.max_hp)
+        }
+
+        return_value.rolls = {
+            // minimum, maximum, average, rolls, base, base_low
+            rolls: combine_rolls(all_rolls, defender),
+            minimum: heal_amount,
+            maximum: calculate_damage_with_base_power(120, true),
+            base: base_high,
+            base_low: heal_amount,
+            average
+        }
+
+        console.log(return_value.rolls)
+    }
+    else {
+        return_value.rolls = roll_generator(1.0)
+    }
 
     if(return_value.rolls.error) {
         return return_value.rolls.error
@@ -313,6 +360,7 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
     calculate_damage_rolls_against_hp(
         move_data,
         defender.data.stats.hp,
+        defender.data.stats.max_hp,
         return_value,
         cutoff,
         max_turns,
@@ -603,12 +651,12 @@ function combine_rolls(rolls, defender) {
     const damages_by_amt = {}
     for(const [roll_dmg, roll_amt] of rolls) {
         const damage = parseInt(roll_dmg)
-        if(damage < 1 || roll_amt <= 0.0) {
+        if(damage === 0 || roll_amt <= 0.0) {
             // ignore anything that does nothing (we've premultiplied accuracy)
             continue
         }
 
-        const effective_damage = Math.min(damage, defender.data.stats.hp)
+        const effective_damage = Math.min(damage, defender.data.stats.max_hp)
         damages_by_amt[effective_damage] = (damages_by_amt[effective_damage] ?? 0) + roll_amt
     }
 
@@ -619,7 +667,11 @@ function combine_rolls(rolls, defender) {
     return new_rolls
 }
 
-function calculate_damage_rolls_against_hp(move_data, starting_hp, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy, starting_successful_moves_in_a_row) {
+function calculate_damage_rolls_against_hp(move_data, starting_hp, max_hp, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy, starting_successful_moves_in_a_row) {
+    if(starting_hp > max_hp || max_hp <= 0 || starting_hp <= 0) {
+        throw new Error(`invalid HP: ${starting_hp} / ${max_hp}`)
+    }
+    
     const rolls = return_value.rolls.rolls
 
     if(move_data.effect === "EFFECT_HYPER_BEAM" || move_data.effect === "EFFECT_FURY_CUTTER" || move_data.effect === "EFFECT_ROLLOUT") {
@@ -629,12 +681,12 @@ function calculate_damage_rolls_against_hp(move_data, starting_hp, return_value,
 
     // create buckets from 0 to HP-1
     const buckets = []
-    for(let i = 0; i < starting_hp; i++) {
+    for(let i = 0; i <= max_hp; i++) {
         buckets.push([0.0, 0.0])
     }
 
-    // at full HP, we're at 100% HP
-    buckets.push([1.0, 1.0])
+    // starting HP should be 100% now...
+    buckets[starting_hp] = [1.0, 1.0]
 
     for(let turn_count = 0; turn_count < (max_turns ?? 256); turn_count++) {
         for(const [dmg, dmg_probability] of rolls) {
@@ -866,21 +918,11 @@ function get_attack_and_defense_stat(game, generation, move_data, attacker, defe
     }
 }
 
-function apply_move_modifications(move_data, attacker) {
-    switch(move_data.effect) {
-        case "EFFECT_RETURN": {
-            move_data.base_power = int_divide(attacker.data.friendship, 5) * 2
-            break
-        }
-        case "EFFECT_FRUSTRATION": {
-            move_data.base_power = int_divide(255 - attacker.data.friendship, 5) * 2
-            break
-        }
-        case "EFFECT_HIDDEN_POWER": {
-            const { base_power, type } = get_hidden_power_stats(attacker.data.dvs)
-            move_data.base_power = base_power
-            move_data.type = type
-            break
-        }
+function apply_move_modifications(game, move_data, attacker, defender) {
+    switch(generation_of_game(game)) {
+        case Generation.Gen1:
+            return
+        case Generation.Gen2:
+            return gen2.apply_move_modifications(game, move_data, attacker, defender)
     }
 }

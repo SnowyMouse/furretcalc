@@ -1,7 +1,7 @@
 "use strict"
 
 import * as furretcalc from "./furretcalc/furretcalc.js"
-import {Generation, generation_of_game, StatusCondition} from "./furretcalc/util.js";
+import {Game, Generation, generation_of_game, StatusCondition} from "./furretcalc/util.js";
 
 furretcalc.load_furretcalc("./js/furretcalc")
     .then(() => set_up_widgets_initial())
@@ -196,9 +196,7 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         let move_display_name = move_data.name
         if(move_data.effect === "EFFECT_HIDDEN_POWER") {
             const { base_power, type } = furretcalc.util.get_hidden_power_stats(stats.data.dvs)
-            const note = (stats.data.dvs.attack === 0 && stats.data.dvs.defense === 0 && stats.data.dvs.special === 0 && stats.data.dvs.speed === 0) ? "(all-zero IVs (DVs) set)" : ""
-            suggestions[`hidden_power_${is_player ? "player": "opponent"}`] = `Calculated ${is_player ? "your" : "opponent's"} Hidden Power as a ${type}-type move with ${base_power} base power${note}.`
-
+            suggestions[`hidden_power_${is_player ? "player": "opponent"}`] = `Calculated ${is_player ? "your" : "opponent's"} Hidden Power as a ${type}-type move with ${base_power} base power.`
             move_display_name = `${move_display_name} ${type}`
         }
 
@@ -331,7 +329,12 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
                 suggestions["beat_up_ttk_note"] = `Beat Up damage does not account for any party members.`
                 break
             case "EFFECT_PRESENT":
-                suggestions["present_wip"] = `Present is not yet implemented.`
+                if(game === furretcalc.util.Game.GoldSilver) {
+                    suggestions["present_wip"] = `Present's glitchy Gold/Silver behavior is not yet implemented.`
+                }
+                break
+            case "EFFECT_TRIPLE_KICK":
+                suggestions["triple_kick_wip"] = "Triple Kick is not yet implemented."
                 break
             case "EFFECT_FURY_CUTTER":
                 if(moves[index].properties.per_hit) {
@@ -1205,6 +1208,10 @@ function reshow_range() {
 
     let attack_boost_info = []
     let defense_boost_info = []
+    
+    if(infos.move_data.effect === "EFFECT_REVERSAL" || infos.move_data.effect === "EFFECT_HIDDEN_POWER") {
+        attack_boost_info.push(`${infos.data.move_data.base_power} Power`)
+    }
 
     const badge_boosts = furretcalc.get_stat_badge_boost_badges(game)
 
@@ -1324,7 +1331,7 @@ function reshow_range() {
         html += `<tr><td>Miss</td><td>${single_decimal(100 - 100 * infos.data.rolls.accuracy)}%</td>`
     }
     for(const [damage, probability] of infos.data.rolls.rolls) {
-        html += `<tr><td>${damage}</td><td>${single_decimal(probability * 100 * infos.data.rolls.accuracy)}%</td>`
+        html += `<tr><td>${damage}${damage < 0 ? " (heals)" : ""}</td><td>${single_decimal(probability * 100 * infos.data.rolls.accuracy)}%</td>`
     }
     html += "</table>"
 

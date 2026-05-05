@@ -1,4 +1,4 @@
-import {calculate_hp_dv, calculate_monster_stats, int_divide, Type, Weather, NO_MOVE, Generation} from "../util.js"
+import {calculate_hp_dv, calculate_monster_stats, int_divide, Type, Weather, NO_MOVE, calculate_reversal_base_power, get_hidden_power_stats, Game} from "../util.js"
 
 let moves_json = null
 
@@ -527,4 +527,33 @@ const BADGES = Object.freeze({
 })
 export function get_badge_list() {
     return BADGES
+}
+
+export function apply_move_modifications(game, move_data, attacker, defender) {
+    switch(move_data.effect) {
+        case "EFFECT_RETURN": {
+            move_data.base_power = int_divide(attacker.data.friendship, 5) * 2
+            break
+        }
+        case "EFFECT_FRUSTRATION": {
+            move_data.base_power = int_divide(255 - attacker.data.friendship, 5) * 2
+            break
+        }
+        case "EFFECT_HIDDEN_POWER": {
+            const { base_power, type } = get_hidden_power_stats(attacker.data.dvs)
+            move_data.base_power = base_power
+            move_data.type = type
+            break
+        }
+        case "EFFECT_REVERSAL": {
+            move_data.base_power = calculate_reversal_base_power(attacker.data.stats.hp, attacker.data.stats.max_hp)
+        }
+        case "EFFECT_PRESENT": {
+            if(game !== Game.GoldSilver) {
+                break
+            }
+            // TODO: Present base power
+            break
+        }
+    }
 }

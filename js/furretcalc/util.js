@@ -205,3 +205,28 @@ const HIDDEN_POWER_TYPE_TABLE = Object.freeze([
     Type.DRAGON,
     Type.DARK
 ])
+
+export function calculate_hp_px_classic(hp, max_hp) {
+    return int_divide(hp * 48, max_hp)
+}
+
+const REVERSAL_THRESHOLDS = Object.freeze([
+    Object.freeze([33, 20]),
+    Object.freeze([17, 40]),
+    Object.freeze([10, 80]),
+    Object.freeze([5, 100]),
+    Object.freeze([2, 150]),
+    Object.freeze([0, 200])
+])
+
+export function calculate_reversal_base_power(hp, max_hp) {
+    const hp_px = calculate_hp_px_classic(hp, max_hp)
+
+    for(const [px, power] of REVERSAL_THRESHOLDS) {
+        if(hp_px >= px) {
+            return power
+        }
+    }
+
+    throw new Error("failed to get reversal/flail BP")
+}
