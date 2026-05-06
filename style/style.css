@@ -464,6 +464,8 @@ header p {
 
 .stats_move.struggle_move {
     display: none;
+    border-left-width: 4px;
+    border-left-style: double;
 }
 
 #range_details {
