@@ -11,6 +11,7 @@ let game = null
 let generation = null
 let manual_stat_input = false
 let auto_sync = false
+let struggle_calcs = false
 
 let debounce_timer = null
 function recalculate() {
@@ -41,6 +42,12 @@ async function actually_recalculate() {
 
         document.getElementById("range_details").style.display = "none"
         document.getElementById("notes_buffer_outer").style.display = "none"
+
+        struggle_calcs = document.getElementById("struggle_calcs").checked
+
+        for(const struggle_move of document.getElementsByClassName("struggle_move")) {
+            struggle_move.style.display = struggle_calcs ? "block" : "none"
+        }
 
         move_data_infos = {}
 
@@ -233,11 +240,12 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
 
         const fixer = max_percent >= 10.0 ? no_decimal : single_decimal
 
-        let displayed_range = base_low === base ?
-            `${displayed_min} (${fixer(min_percent * 100.0)}%)`
-            : `${displayed_min} - ${displayed_max} (${fixer(min_percent * 100.0)}% - ${fixer(max_percent * 100.0)}%)`
+        const min_percent_str = `${fixer(min_percent * 100.0)}%`
 
-        data_text += `<a href="#" class="range range_clickable" onclick="show_range('${info_index}')">${displayed_range}</a>`
+        const range_value = base_low === base ? `${displayed_min}` : `${displayed_min} - ${displayed_max}`
+        const range_percentage = base_low === base ? min_percent_str : `${min_percent_str} - ${fixer(max_percent * 100.0)}%`
+
+        data_text += `<a href="#" class="range range_clickable" onclick="show_range('${info_index}')">${range_value}<br />${range_percentage}</a>`
 
         if(turn_chances.some((chance) => chance > 0.0)) {
             let chances = Object.entries(turn_chances)
@@ -300,7 +308,7 @@ function format_move_data(base_div, stats, stats_opposite, moves, is_player, sug
         }
 
         move_data_infos[info_index] = {
-            data, move_name, move_data, is_player, stats, stats_opposite, displayed_range, properties, move_display_name
+            data, move_name, move_data, is_player, stats, stats_opposite, displayed_range: `${range_value} (${range_percentage})`, properties, move_display_name
         }
     }
 
@@ -406,6 +414,9 @@ function get_stats(is_player) {
         item: null,
         status: null,
         level: null
+    }
+    if(struggle_calcs) {
+        stats.moves.push("STRUGGLE")
     }
     let current_hp = ""
     for(const stat of document.querySelectorAll(`${get_stats_box(is_player)} input, ${get_stats_box(is_player)} select`)) {
@@ -755,6 +766,10 @@ ${select_all_buttons}
                 <div class="stats_move_data"></div>
             </div>
             <div class="stats_move_4 stats_move">
+                <div class="stats_move_name"></div>
+                <div class="stats_move_data"></div>
+            </div>
+            <div class="stats_move_5 stats_move struggle_move">
                 <div class="stats_move_name"></div>
                 <div class="stats_move_data"></div>
             </div>

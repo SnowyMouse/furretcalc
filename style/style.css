@@ -343,9 +343,10 @@ header p {
 
 .damage_outer {
     width: 100%;
-    height: 100px;
+    height: 112px;
     border: 1px solid #C88746;
     margin-top: 8px;
+    display: flex;
 }
 
 #instructions * {
@@ -393,7 +394,7 @@ header p {
 }
 
 .stats_move {
-    width: 25%;
+    flex: 1;
     display: block;
     float: left;
     height: 100%;
@@ -459,6 +460,10 @@ header p {
 
 .stats_move.error_move {
     background-color: #662222
+}
+
+.stats_move.struggle_move {
+    display: none;
 }
 
 #range_details {

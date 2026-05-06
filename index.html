@@ -78,13 +78,6 @@
         <div class="other_stat_inner"><span class="label">Game</span><select id="game" tabindex="10000"></select></div>
     </div>
     <div class="other_stats">
-        <div class="other_stat_inner"><span class="label">Iteration Granularity</span><select id="settings_per_turn" tabindex="20000"><option value="per_turn">Per Turn</option><option value="per_hit">Per Hit</option></select></div>
-        <div class="other_stat_inner"><span class="label">Max Iterations</span><input type="text" id="settings_max_turns" value="200" tabindex="20000" /></div>
-        <div class="other_stat_inner"><span class="label">Max Damage Rolls</span><input type="text" id="settings_max_damage_rolls" value="50000" tabindex="20000" /></div>
-        <div class="other_stat_inner"><span class="label">Target KO Chance (%)</span><input type="text" id="settings_ko_chance" value="90" tabindex="20000" /></div>
-    </div>
-    <div class="other_stats">
-        <div class="other_stat_inner"><span class="label">Range Display</span><select id="settings_range_display" tabindex="20000"><option value="base_damage">Base Damage</option><option value="full_range">Full Range</option></select></div>
         <div class="other_stat_inner">
             <span class="label">Weather</span>
             <select id="weather" tabindex="10000">
@@ -101,10 +94,24 @@
                 <option value="pvp" disabled>Link Battle / Battle Tower (TODO)</option>
             </select>
         </div>
+    </div>
+    <div class="other_stats">
+        <div class="other_stat_inner"><span class="label">Iteration Granularity</span><select id="settings_per_turn" tabindex="20000"><option value="per_turn">Per Turn</option><option value="per_hit">Per Hit</option></select></div>
+        <div class="other_stat_inner"><span class="label">Max Iterations</span><input type="text" id="settings_max_turns" value="200" tabindex="20000" /></div>
+        <div class="other_stat_inner"><span class="label">Max Damage Rolls</span><input type="text" id="settings_max_damage_rolls" value="50000" tabindex="20000" /></div>
+        <div class="other_stat_inner"><span class="label">Target KO Chance (%)</span><input type="text" id="settings_ko_chance" value="90" tabindex="20000" /></div>
+    </div>
+    <div class="other_stats">
+        <div class="other_stat_inner"><span class="label">Range Display</span><select id="settings_range_display" tabindex="20000"><option value="base_damage">Base Damage</option><option value="full_range">Full Range</option></select></div>
         <div class="other_stat_inner">
             <span class="label">Stat Input</span>
             <select id="stat_input_type" tabindex="10000"></select>
         </div>
+        <div class="other_stat_inner">
+            <span class="label">Struggle Calcs</span>
+            <div class="checkbox_filler"><input type="checkbox" id="struggle_calcs" /></div>
+        </div>
+        <div class="other_stat_inner">(TODO)</div>
     </div>
 </div>
 
