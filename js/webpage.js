@@ -1521,7 +1521,7 @@ function stat_loop() {
                         break
                     }
                     case "spd_dv":
-                    case "spa_dv": {
+                    case "spc_dv": {
                         c.value = stats.special_dv
                         break
                     }
@@ -1529,6 +1529,29 @@ function stat_loop() {
                         c.value = stats.speed_dv
                         break
                     }
+
+                    case "hp_statexp": {
+                        c.value = stats.hp_statexp
+                        break
+                    }
+                    case "atk_statexp": {
+                        c.value = stats.attack_statexp
+                        break
+                    }
+                    case "def_statexp": {
+                        c.value = stats.defense_statexp
+                        break
+                    }
+                    case "spc_statexp":
+                    case "spd_statexp": {
+                        c.value = stats.special_statexp
+                        break
+                    }
+                    case "spe_statexp": {
+                        c.value = stats.speed_statexp
+                        break
+                    }
+
                     case "atk_stat": {
                         c.value = stats.attack
                         break
@@ -1686,6 +1709,12 @@ class StatGetter {
             special_dv: party_member.ivs.special.value,
             speed_dv: party_member.ivs.speed.value,
 
+            hp_statexp: party_member.evs.hp.value,
+            attack_statexp: party_member.evs.attack.value,
+            defense_statexp: party_member.evs.defense.value,
+            special_statexp: party_member.evs.special.value,
+            speed_statexp: party_member.evs.speed.value,
+
             friendship: party_member.friendship.value,
 
             attack_stage: active_member.modifiers.attack.value,
@@ -1766,6 +1795,12 @@ class StatGetterDeprecated {
             defense_dv: party_member.dvDefense.value,
             special_dv: party_member.dvSpecial.value,
             speed_dv: party_member.dvSpeed.value,
+
+            hp_statexp: party_member.statExpHp.value,
+            attack_statexp: party_member.statExpAttack.value,
+            defense_statexp: party_member.statExpDefense.value,
+            special_statexp: party_member.statExpSpecial.value,
+            speed_statexp: party_member.statExpSpeed.value,
 
             friendship: party_member.friendship.value,
 
