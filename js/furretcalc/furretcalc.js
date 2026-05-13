@@ -262,11 +262,21 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
             return rolls
         }
 
-        const bp_40 = calculate_rolls(40, 102/256).rolls
-        const bp_80 = calculate_rolls(80, 76/256).rolls
-        const bp_120 = calculate_rolls(120, 26/256).rolls
+        const chance_40 = 102/256
+        const chance_80 = 76/256
+        const chance_120 = 26/256
+        const chance_heal = 0.25
+
+        const bp_40 = calculate_rolls(40, chance_40)
+        const bp_80 = calculate_rolls(80, chance_80)
+        const bp_120 = calculate_rolls(120, chance_120)
+
+        const rolls_40 = bp_40.rolls
+        const rolls_80 = bp_80.rolls
+        const rolls_120 = bp_120.rolls
+
         const heal_amount = -int_divide(defender.data.stats.max_hp, 4)
-        const all_rolls = [...bp_40, ...bp_80, ...bp_120, [heal_amount, 0.25]]
+        const all_rolls = [...rolls_40, ...rolls_80, ...rolls_120, [heal_amount, chance_heal]]
         const base_high = calculate_damage_with_base_power(120, false)
 
         let average = 0
@@ -283,10 +293,9 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
             maximum: calculate_damage_with_base_power(120, true),
             base: base_high,
             base_low: heal_amount,
-            average
+            average,
+            average_noncrit: bp_40.average_noncrit * chance_40 + bp_80.average_noncrit * chance_80 + bp_120.average_noncrit * chance_120 + heal_amount * chance_heal
         }
-
-        console.log(return_value.rolls)
     }
     else {
         return_value.rolls = roll_generator(1.0)
@@ -354,8 +363,6 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
     if(bypasses_accuracy) {
         accuracy = 1.0
     }
-
-    return_value.rolls.average *= accuracy
 
     calculate_damage_rolls_against_hp(
         move_data,
@@ -451,6 +458,7 @@ function generate_rolls_for_move({
     let rolls
     let base_low
     let base
+    let average_noncrit
 
     const level = attacker.data.level
     switch(move_data.effect) {
@@ -495,6 +503,8 @@ function generate_rolls_for_move({
             break
         }
         default: {
+            average_noncrit = 0
+
             const noncrit_chance = 1.0 - crit_rate
             base = noncrit_damage
 
@@ -506,6 +516,8 @@ function generate_rolls_for_move({
                     base_low = noncrit_damage_roll
                 }
 
+                average_noncrit += noncrit_damage_roll
+
                 let crit_damage_roll = Math.max(int_divide(crit_damage * i, MAX_ROLL), 1)
                 rolls.push([noncrit_damage_roll, noncrit_chance / roll_count])
                 rolls.push([crit_damage_roll, crit_rate / roll_count])
@@ -514,7 +526,10 @@ function generate_rolls_for_move({
             if (!per_hit) {
                 rolls = calculate_per_turn_rolls(move_data, rolls)
             }
+
+            average_noncrit /= roll_count
         }
+
         break
     }
 
@@ -522,12 +537,13 @@ function generate_rolls_for_move({
     const minimum = rolls_damages.reduce((a, b) => a < b ? a : b)
     const maximum = rolls_damages.reduce((a, b) => a > b ? a : b)
     const average = (rolls_damages.reduce((a, b) => a + b) ?? 0) / rolls_damages.length
+    average_noncrit = average_noncrit ?? average
 
     // Combine rolls
     rolls = combine_rolls(rolls, defender)
 
     return {
-        minimum, maximum, average, rolls, base, base_low
+        minimum, maximum, average, rolls, base, base_low, average_noncrit
     }
 }
 

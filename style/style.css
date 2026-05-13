@@ -468,6 +468,11 @@ header p {
     border-left-style: double;
 }
 
+.special_range_stat {
+    font-weight: bold;
+    color: #FFCB00;
+}
+
 #range_details {
     display: none;
     position: relative;

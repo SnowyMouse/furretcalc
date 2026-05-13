@@ -1290,63 +1290,64 @@ function reshow_range() {
         defense_boost_text = `[${defense_boost_info.join(", ")}]`
     }
 
-    function format_chance_text(cutoff) {
-        let chance_text = " -- "
+    function generate_range_text(cutoff) {
         if(infos.data.turn_chances[0] >= 1.0) {
-            chance_text += `Guaranteed OHKO`
+            return `Guaranteed OHKO`
         }
-        else {
-            let found = false
-            for(const [k,v] of Object.entries(infos.data.turn_chances)) {
-                if(v >= cutoff) {
-                    if(v < 1.0) {
-                        chance_text += `${single_decimal(v * 100)}% chance to `
-                    }
-                    else {
-                        chance_text += `Guaranteed `
-                    }
 
-                    const iteration_index = parseInt(k) + 1
-                    if(iteration_index === 1) {
-                        chance_text += "OHKO"
-                    }
-                    else if(infos.properties.per_hit) {
-                        // can't call it a XHKO because we factor in accuracy, and missing is not hitting
-                        chance_text += `KO in ${iteration_index} attacks`
-                    }
-                    else {
-                        chance_text += `KO in ${iteration_index} turns`
-                    }
+        for(const [k,v] of Object.entries(infos.data.turn_chances)) {
+            if(v >= cutoff) {
+                let chance_text
 
-                    found = true
-                    break
+                if(v < 1.0) {
+                    chance_text = `${single_decimal(v * 100)}% chance to `
                 }
-            }
+                else {
+                    chance_text = `Guaranteed `
+                }
 
-            if(!found) {
-                chance_text += `KO in ${single_decimal(infos.stats_opposite.stats.hp / infos.data.rolls.average)} turns on average`
+                const iteration_index = parseInt(k) + 1
+                if(iteration_index === 1) {
+                    chance_text += "OHKO"
+                }
+                else if(infos.properties.per_hit) {
+                    // can't call it a XHKO because we factor in accuracy, and missing is not hitting
+                    chance_text += `KO in ${iteration_index} attacks`
+                }
+                else {
+                    chance_text += `KO in ${iteration_index} turns`
+                }
+
+                return chance_text
             }
         }
 
-        const hp_display = (infos.stats_opposite.data.stats.max_hp === infos.stats_opposite.data.stats.hp) ? infos.stats_opposite.data.stats.max_hp : `${infos.stats_opposite.data.stats.hp} / ${infos.stats_opposite.data.stats.max_hp}`
-
-        return `Lvl. ${infos.stats.data.level} • ${attack} ${attack_name} ${attack_boost_text} ${species_from_name} ${move_name} vs. ${hp_display} HP • ${defense} ${defense_name} ${defense_boost_text} ${species_to_name}: ${infos.displayed_range}${chance_text}`
+        return `KO in ${single_decimal(infos.stats_opposite.stats.hp / infos.data.rolls.average)} turns on average`
     }
 
-    const fifty_fifty = format_chance_text(0.5)
-    const better = format_chance_text(infos.properties.cutoff)
+    function format_chance_text(chance_text) {
+        const hp_display = (infos.stats_opposite.data.stats.max_hp === infos.stats_opposite.data.stats.hp) ? infos.stats_opposite.data.stats.max_hp : `${infos.stats_opposite.data.stats.hp} / ${infos.stats_opposite.data.stats.max_hp}`
+
+        return `Lvl. ${infos.stats.data.level} • ${attack} ${attack_name} ${attack_boost_text} ${species_from_name} ${move_name} vs. ${hp_display} HP • ${defense} ${defense_name} ${defense_boost_text} ${species_to_name}: ${infos.displayed_range} -- ${chance_text}`
+    }
+
+    const fifty_fifty = format_chance_text(generate_range_text(0.5))
+    const better = format_chance_text(generate_range_text(infos.properties.cutoff))
 
     html += `<h2>Ranges For ${infos.is_player ? "" : "Opponent's"} ${move_name}</h2>`
     if(fifty_fifty !== better) {
         html += `<div class="copypasta">${fifty_fifty}</div>`
     }
     html += `<div class="copypasta">${better}</div>`
+
     html += "<table><tr><th>Damage</th><th>Probability</th></tr>"
+    html += `<tr><td class="special_range_stat">${infos.data.rolls.average.toFixed(1)}</td><td class="special_range_stat">AVERAGE (PER HIT)</td></tr>`
+    html += `<tr><td class="special_range_stat">${infos.data.rolls.average_noncrit.toFixed(1)}</td><td class="special_range_stat">AVERAGE, NON-CRIT (PER HIT)</td></tr>`
     if(infos.data.rolls.accuracy < 1.0) {
-        html += `<tr><td>Miss</td><td>${single_decimal(100 - 100 * infos.data.rolls.accuracy)}%</td>`
+        html += `<tr><td>0 (miss)</td><td>${single_decimal(100 - 100 * infos.data.rolls.accuracy)}%</td></tr>`
     }
     for(const [damage, probability] of infos.data.rolls.rolls) {
-        html += `<tr><td>${damage}${damage < 0 ? " (heals)" : ""}</td><td>${single_decimal(probability * 100 * infos.data.rolls.accuracy)}%</td>`
+        html += `<tr><td>${damage}${damage < 0 ? " (heals)" : ""}</td><td>${single_decimal(probability * 100 * infos.data.rolls.accuracy)}%</td></tr>`
     }
     html += "</table>"
 
