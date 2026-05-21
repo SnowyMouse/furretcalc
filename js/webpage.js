@@ -63,7 +63,7 @@ async function actually_recalculate() {
         if(target_ko_chance > 100.0) { target_ko_chance = 100.0 }
 
         const properties = {
-            per_hit: document.getElementById("settings_per_turn").value === "per_hit",
+            per_hit: false,
             weather: document.getElementById("weather").value,
             max_rolls,
             max_turns,
@@ -125,6 +125,9 @@ async function actually_recalculate() {
         }
 
         reshow_range()
+        
+        document.getElementById("calculator_content_outer").style.display = ""
+        document.getElementById("loading_box").style.display = "none"
     }
     finally {
         is_calculating = false
@@ -132,7 +135,7 @@ async function actually_recalculate() {
 }
 
 const QUASI_TYPELESS_NOTE = "This move does not receive STAB, type-based badge boosts, weather boosts (or nerfs), or type effectiveness (it does not interact with your opponent's types).\n\nHowever, its typing is still used for determining damage category and item boosts."
-const DISPLAYED_TURN_COUNT = 4
+const DISPLAYED_TURN_COUNT = 5
 
 let move_data_infos = {}
 
@@ -549,8 +552,14 @@ function set_up_widgets() {
 
     let tabindex = 1
 
+    let current_stat_index = 0
+
     // Add in stat placeholder stuff
     for(const placeholder of document.getElementsByClassName("pokemon_stats_placeholder")) {
+        current_stat_index++
+
+        const id_prefix = `pokemon_stats_${current_stat_index}`
+
         // smooth flowing from DVs to stats and then
         let stat_tabs = tabindex
         let misc_tabs = stat_tabs + 1
@@ -567,80 +576,125 @@ function set_up_widgets() {
     </tr>
     <tr>
         <td title="Hitpoints">HP</td>
-        <td><input type="text" class="hp_dv" value="0" tabindex="${stat_tabs}" readonly disabled></td>
-        <td class="statexp_column"><input type="text" class="hp_statexp" value="0" tabindex="${stat_tabs}"></td>
-        <td><input type="text" class="hp_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
+        <td><input type="text" class="hp_dv number_input" value="0" tabindex="${stat_tabs}" readonly disabled></td>
+        <td class="statexp_column"><input type="text" class="hp_statexp number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td><input type="text" class="hp_stat premultiplied_stat number_input" value="0" tabindex="${stat_tabs}"></td>
         <td>--</td>
         <td class="hp_final final_stat">--</td>
     </tr>
     <tr>
         <td title="Attack">ATK</td>
-        <td><input type="text" class="atk_dv" value="0" tabindex="${stat_tabs}"></td>
-        <td class="statexp_column"><input type="text" class="atk_statexp" value="0" tabindex="${stat_tabs}"></td>
-        <td><input type="text" class="atk_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
-        <td><select class="atk_stage stat_stage" tabindex="${stat_tabs}"></select></td>
+        <td><input type="text" class="atk_dv number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td class="statexp_column"><input type="text" class="atk_statexp number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td><input type="text" class="atk_stat premultiplied_stat number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td><select class="atk_stage stat_stage number_input" tabindex="${stat_tabs}"></select></td>
         <td class="atk_final final_stat">--</td>
     </tr>
     <tr>
         <td title="Defense">DEF</td>
-        <td><input type="text" class="def_dv" value="0" tabindex="${stat_tabs}"></td>
-        <td class="statexp_column"><input type="text" class="def_statexp" value="0" tabindex="${stat_tabs}"></td>
-        <td><input type="text" class="def_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
-        <td><select class="def_stage stat_stage" tabindex="${stat_tabs}"></select></td>
+        <td><input type="text" class="def_dv number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td class="statexp_column"><input type="text" class="def_statexp number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td><input type="text" class="def_stat premultiplied_stat number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td><select class="def_stage stat_stage number_input" tabindex="${stat_tabs}"></select></td>
         <td class="def_final final_stat">--</td>
     </tr>
     <tr>
         ${generation === Generation.Gen1 ? `<td title="Special (Special Attack and Special Defense)">SPC</td>` : `<td title="Special Attack">SPA</td>`}
-        <td><input type="text" class="spc_dv" value="0" tabindex="${stat_tabs}"></td>
-        <td class="statexp_column"><input type="text" class="spc_statexp" value="0" tabindex="${stat_tabs}"></td>
-        <td><input type="text" class="spa_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
-        <td><select class="spa_stage stat_stage" tabindex="${stat_tabs}"></select></td>
+        <td><input type="text" class="spc_dv number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td class="statexp_column"><input type="text" class="spc_statexp number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td><input type="text" class="spa_stat premultiplied_stat number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td><select class="spa_stage stat_stage number_input" tabindex="${stat_tabs}"></select></td>
         <td class="spa_final final_stat">--</td>
     </tr>
     ${generation === Generation.Gen1 ? `` : `
     <tr>
         <td title="Special Defense">SPD</td>
-        <td><input type="text" class="spd_dv" value="0" tabindex="${stat_tabs}" readonly disabled></td>
-        <td class="statexp_column"><input type="text" class="spd_statexp" value="0" tabindex="${stat_tabs}" readonly disabled></td>
-        <td><input type="text" class="spd_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
-        <td><select class="spd_stage stat_stage" tabindex="${stat_tabs}"></select></td>
+        <td><input type="text" class="spd_dv number_input" value="0" tabindex="${stat_tabs}" readonly disabled></td>
+        <td class="statexp_column"><input type="text" class="spd_statexp number_input" value="0" tabindex="${stat_tabs}" readonly disabled></td>
+        <td><input type="text" class="spd_stat premultiplied_stat number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td><select class="spd_stage stat_stage number_input" tabindex="${stat_tabs}"></select></td>
         <td class="spd_final final_stat">--</td>
     </tr>
     `}
     <tr>
         <td title="Speed">SPE</td>
-        <td><input type="text" class="spe_dv" value="0" tabindex="${stat_tabs}"></td>
-        <td class="statexp_column"><input type="text" class="spe_statexp" value="0" tabindex="${stat_tabs}"></td>
-        <td><input type="text" class="spe_stat premultiplied_stat" value="0" tabindex="${stat_tabs}"></td>
-        <td><select class="spe_stage stat_stage" tabindex="${stat_tabs}"></select></td>
+        <td><input type="text" class="spe_dv number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td class="statexp_column"><input type="text" class="spe_statexp number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td><input type="text" class="spe_stat premultiplied_stat number_input" value="0" tabindex="${stat_tabs}"></td>
+        <td><select class="spe_stage stat_stage number_input" tabindex="${stat_tabs}"></select></td>
         <td class="spe_final final_stat">--</td>
     </tr>
     </table>
     <div class="other_stats">
-        <div class="other_stat_inner"><span class="label">Species</span><select class="species" tabindex="${misc_tabs}"></select></div>
-        ${items_are_supported ? `<div class="other_stat_inner"><span class="label">Held Item</span><select class="held_item" tabindex="${misc_tabs}"></select></div>` : ``}
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_species">Species</label>
+            <select class="species" id="${id_prefix}_species" tabindex="${misc_tabs}"></select>
+        </div>
+        ${items_are_supported ? `<div class="other_stat_inner"><label for="${id_prefix}_held_item">Held Item</label><select class="held_item" id="${id_prefix}_held_item" tabindex="${misc_tabs}"></select></div>` : ``}
     </div>
     <div class="other_stats">
-        <div class="other_stat_inner"><span class="label">Level</span><input type="text" class="level" value="0" tabindex="${misc_tabs}" /></div>
-        <div class="other_stat_inner"><span class="label">Friendship</span><input type="text" class="friendship" value="0" tabindex="${misc_tabs}" /></div>
-        <div class="other_stat_inner"><span class="label">Status</span><select class="status" tabindex="${misc_tabs}"></select></div>
-        <div class="other_stat_inner"><span class="label">Current HP</span><input type="text" class="current_hp" title="This can be a percentage (e.g. 100%), pixels (e.g. 48px), or a raw HP amount (e.g. 123).\n\nYou can also type a simple addition/subtraction expression (e.g. '100%-5' or '-5' or '-3-2' for max HP minus 5)." placeholder="100%" /></div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_level">Level</label>
+            <input type="text" class="level number_input" id="${id_prefix}_level" value="0" tabindex="${misc_tabs}" />
+        </div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_friendship">Friendship</label>
+            <input type="text" class="friendship number_input" id="${id_prefix}_friendship" value="0" tabindex="${misc_tabs}" />
+        </div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_status">Status</label>
+            <select class="status" id="${id_prefix}_status" tabindex="${misc_tabs}"></select>
+        </div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_current_hp">Current HP</label>
+            <input type="text" class="current_hp number_input" id="${id_prefix}_current_hp" tabindex="${misc_tabs}" title="This can be a percentage (e.g. 100%), pixels (e.g. 48px), or a raw HP amount (e.g. 123).\n\nYou can also type a simple addition/subtraction expression (e.g. '100%-5' or '-5' or '-3-2' for max HP minus 5)." placeholder="100%" />
+        </div>
     </div>
     <div class="other_stats">
-        <div class="other_stat_inner"><span class="label">Type 1</span><select class="type_primary typing" tabindex="${misc_tabs}"></select></div>
-        <div class="other_stat_inner"><span class="label">Type 2</span><select class="type_secondary typing" tabindex="${misc_tabs}"></select></div>
-        <div class="other_stat_inner"><span class="label">Accuracy</span><select class="acc_stage stat_stage" tabindex="${misc_tabs}"></select></div>
-        <div class="other_stat_inner"><span class="label">Evasion</span><select class="eva_stage stat_stage" tabindex="${misc_tabs}"></select></div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_type1">Type 1</label>
+            <select class="type_primary typing" id="${id_prefix}_type1" tabindex="${misc_tabs}"></select>
+        </div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_type2">Type 2</label>
+            <select class="type_secondary typing" id="${id_prefix}_type2" tabindex="${misc_tabs}"></select>
+        </div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_acc_stage">Accuracy</label>
+            <select class="acc_stage stat_stage number_input" id="${id_prefix}_acc_stage" tabindex="${misc_tabs}"></select>
+        </div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_eva_stage">Evasion</label>
+            <select class="eva_stage stat_stage number_input" id="${id_prefix}_eva_stage" tabindex="${misc_tabs}"></select>
+        </div>
     </div>
     <div class="other_stats">
-        <div class="other_stat_inner"><span class="label">Move #1</span><select class="move_1 move" tabindex="${misc_tabs}"></select></div>
-        <div class="other_stat_inner"><span class="label">Move #2</span><select class="move_2 move" tabindex="${misc_tabs}"></select></div>
-        <div class="other_stat_inner"><span class="label">Move #3</span><select class="move_3 move" tabindex="${misc_tabs}"></select></div>
-        <div class="other_stat_inner"><span class="label">Move #4</span><select class="move_4 move" tabindex="${misc_tabs}"></select></div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_move1">Move #1</label>
+            <select class="move_1 move" id="${id_prefix}_move1" tabindex="${misc_tabs}"></select>
+        </div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_move2">Move #2</label>
+            <select class="move_2 move" id="${id_prefix}_move2" tabindex="${misc_tabs}"></select>
+        </div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_move3">Move #3</label>
+            <select class="move_3 move" id="${id_prefix}_move3" tabindex="${misc_tabs}"></select>
+        </div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_move4">Move #4</label>
+            <select class="move_4 move" id="${id_prefix}_move4" tabindex="${misc_tabs}"></select>
+        </div>
     </div>
     <div class="other_stats">
-        <div class="other_stat_inner"><span class="label">Reflect</span><div class="checkbox_filler"><input type="checkbox" class="reflect" /></div></div>
-        <div class="other_stat_inner"><span class="label">Light Screen</span><div class="checkbox_filler"><input type="checkbox" class="light_screen" /></div></div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_reflect">Reflect</label>
+            <input type="checkbox" id="${id_prefix}_reflect" tabindex="${misc_tabs}" class="reflect" />
+        </div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_light_screen">Light Screen</label>
+            <input type="checkbox" id="${id_prefix}_light_screen" tabindex="${misc_tabs}" class="light_screen" />
+        </div>
     </div>
         `
 
@@ -819,6 +873,23 @@ ${select_all_buttons}
 
     refresh_trainer_class_list(game)
     update_stat_input_type()
+
+    fixup_select()
+}
+
+function fixup_select() {
+    // select elements don't support :before or :after so we have to put everything in a wrapper
+    for(const element of document.querySelectorAll("select")) {
+        const parent = element.parentElement
+        if(Object.values(parent.classList).includes("select-wrapper")) {
+            continue
+        }
+
+        const wrapper = document.createElement("div")
+        wrapper.className = "select-wrapper"
+        parent.replaceChild(wrapper, element)
+        wrapper.appendChild(element)
+    }
 }
 
 function update_stat_input_type() {
@@ -1275,6 +1346,9 @@ function reshow_range() {
     if(item_data != null && furretcalc.get_type_boost_items(game)[item_data.effect] === infos.data.move_data.type) {
         attack_boost_info.push(`+${infos.data.move_data.type}-Item`)
     }
+    if(infos.data.recovery_per_turn > 0) {
+        defense_boost_info.push(`+${infos.data.recovery_per_turn} HP/turn`)
+    }
 
     attack_boost_info = attack_boost_info.filter((a) => a != null && a !== "")
     defense_boost_info = defense_boost_info.filter((a) => a != null && a !== "")
@@ -1334,7 +1408,7 @@ function reshow_range() {
     const fifty_fifty = format_chance_text(generate_range_text(0.5))
     const better = format_chance_text(generate_range_text(infos.properties.cutoff))
 
-    html += `<h2>Ranges For ${infos.is_player ? "" : "Opponent's"} ${move_name}</h2>`
+    html += `<h2>${infos.is_player ? "Your" : "Opponent's"} ${move_name}</h2>`
     if(fifty_fifty !== better) {
         html += `<div class="copypasta">${fifty_fifty}</div>`
     }
@@ -1359,10 +1433,6 @@ function reshow_range() {
 window.clear_all_badges = clear_all_badges
 window.select_all_badges = select_all_badges
 window.show_range = show_range
-window.show_instructions = () => {
-    document.getElementById("instructions").style.display = "block"
-    document.getElementById("instructions_show").style.display = "none"
-}
 
 function single_decimal(number) {
     return (Math.floor(Math.abs(number) * 10) / 10 * (number < 0 ? -1 : 1)).toFixed(1)
@@ -1434,9 +1504,9 @@ function evaluate(starting_value, expression) {
 }
 
 const StatInputType = {
-    Calculate: "Calculate",
-    Manual: "Manual",
-    AutoSync: "Auto-Sync",
+    Calculate: "Calculate (input IVs and stat experience)",
+    Manual: "Manual (input stats from summary screen)",
+    AutoSync: "Auto-Sync (pull from Poke-A-Byte)",
 }
 
 let client = null

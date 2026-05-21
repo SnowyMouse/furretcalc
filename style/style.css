@@ -15,7 +15,18 @@
 
 body {
     padding: 0;
-    margin: 10px 0 10px 0;
+    margin: 0;
+    background-color: #2A1A0F;
+    background-image: url('./furret_bg.png');
+    background-size: 500px;
+    background-attachment: fixed;
+    animation: furret_background_animation 20s linear infinite;
+    font-family: "Roboto", sans-serif;
+}
+
+@keyframes furret_background_animation {
+    from { background-position: 0 0; }
+    to { background-position: 1000px 1000px; }
 }
 
 strong {
@@ -23,19 +34,26 @@ strong {
     font-weight: bold;
 }
 
-noscript {
+#loading_box, noscript {
     display: block;
     text-align: center;
     margin-top: 12px;
     font-family: "Roboto Bold", sans-serif;
-    background-color: red;
     color: white;
-    font-size: 28px;
     padding-top: 12px;
     padding-bottom: 12px;
 }
 
-noscript a {
+#loading_box {
+    background-color: rgb(164, 79, 0);
+    font-size: 14px;
+}
+
+noscript {
+    background-color: rgb(164, 0, 0);
+}
+
+noscript * {
     color: white;
     font-family: "Roboto Bold", sans-serif;
 }
@@ -46,36 +64,31 @@ noscript a:hover {
 
 * {
     color: #FFEEDD;
-    font-family: "Roboto Condensed", sans-serif;
-    font-weight: normal;
     box-sizing: border-box;
 }
 
 h1, h2, h3 {
     font-family: "Roboto Bold", sans-serif;
-}
-
-body {
-    background-color: #1B0F04;
+    font-weight: 100;
 }
 
 a {
     color: #FFEEDD;
 }
 
-a:hover {
-    color: #C88746;
+.stats_move a:hover {
+    color: #FFF;
+    font-weight: bold;
 }
 
-footer, header {
+footer {
     width: 100%;
-    text-align: center;
+    padding-top: 8px;
+    position: relative;
 }
 
 #badges_box_outer {
     width: 100%;
-    border-top: 1px solid #FFEEDD;
-    padding: 8px;
 }
 
 #badges_box_inner {
@@ -89,9 +102,11 @@ footer, header {
 
 #generated_time {
     font-size: 11px;
-    margin-top: 5px;
     font-family: "Hack", monospace;
     text-align: right;
+    position: absolute;
+    bottom: 0;
+    right: 0;
 }
 
 #badges_box_outer .badge_box {
@@ -169,6 +184,11 @@ table.stat_input {
     margin-top: 8px;
 }
 
+table.stat_input tr th {
+    font-family: "Roboto Bold", sans-serif;
+    font-weight: normal;
+}
+
 table.stat_input tr th:first-child, table.stat_input tr td:first-child {
     width: 35px;
 }
@@ -185,11 +205,43 @@ table.stat_input tr td, table.stat_input tr th .final_stat {
     font-size: 12px;
 }
 
-input[type="text"], select, button, input[type="checkbox"] {
+input[type="text"], select, option, optgroup, button, input[type="checkbox"] {
     border: 1px solid #C88746;
     border-radius: 0;
-    background-color: rgba(0,0,0,0);
+    background-color: rgba(0,0,0,1);
     color: #FFEEDD;
+    appearance: none;
+    font-size: 14px;
+    font-family: "Roboto", sans-serif;
+}
+
+input[type="text"], select, option, optgroup, button {
+    padding: 2px;
+    height: 22px;
+}
+
+.select-wrapper {
+    position: relative;
+}
+
+select {
+    padding-right: 14px;
+}
+
+.select-wrapper::before {
+    content: " ";
+    background-image: url("./select_arrow.png");
+    opacity: 0.7;
+    width: 10px;
+    height: 10px;
+    display: block;
+    position: absolute;
+    background-size: contain;
+    pointer-events: none;
+    background-repeat: no-repeat;
+    top: 6px;
+    filter: invert(70%) sepia(100%) saturate(3000%) brightness(300%);
+    right: 4px;
 }
 
 input[type="text"]:read-only {
@@ -217,9 +269,7 @@ button:active {
     color: #FFFFFF;
 }
 
-.stat_input input,
-.other_stats input,
-.stat_stage {
+.number_input {
     text-align: right;
 }
 
@@ -248,7 +298,7 @@ button:active {
     display: flex;
     align-items: center;
     margin-top: 6px;
-    gap: 8px;
+    gap: 4px;
 }
 
 .other_stat_inner {
@@ -257,9 +307,10 @@ button:active {
     flex: 1;
 }
 
-.other_stat_inner .label {
+.other_stat_inner label {
     font-size: 12px;
     display: inline-block;
+    width: 100%;
 }
 
 p {
@@ -273,9 +324,15 @@ header p {
     font-size: 16px;
 }
 
-#instructions, #calculator_content, #generated_time {
+#calculator_content_outer {
     width: 1500px;
-    margin: auto auto 8px;
+    background-color: rgba(0,0,0,0.8);
+    padding: 8px;
+    margin: auto;
+}
+
+#instructions, #calculator_content, #generated_time {
+    width: 100%;
 }
 
 #instructions {
@@ -284,32 +341,26 @@ header p {
 
 #calculator_content {
     display: flex;
-    border: 2px solid #FFEEDD;
-}
-
-.pokemon_stats {
-    padding: 8px;
+    margin-top: 4px;
 }
 
 .pokemon_input {
-    width: 450px;
+    width: 444px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .pokemon_input table {
     width: 100%;
 }
 
-#field_data, #preset_lookup, #settings {
-    border-top: 1px solid #FFEEDD;
-    padding: 8px;
-}
-
 #calc_buffer {
     flex: 1;
-    border-left: 1px solid #FFEEDD;
-    border-right: 1px solid #FFEEDD;
     display: flex;
     flex-direction: column;
+    padding-left: 8px;
+    padding-right: 8px;
 }
 
 #calc_buffer h2 {
@@ -327,12 +378,8 @@ header p {
     text-align: right;
 }
 
-#calc_buffer .calc_element:not(:first-child) {
-    border-top: 1px solid #FFEEDD;
-}
-
 .calc_element {
-    padding: 8px;
+    margin-bottom: 8px;
     flex-basis: content;
 }
 
@@ -346,6 +393,7 @@ header p {
     height: 112px;
     border: 1px solid #C88746;
     margin-top: 8px;
+    background-color: #000000;
     display: flex;
 }
 
@@ -356,13 +404,10 @@ header p {
 
 #suggestions_and_notes_list {
     font-size: 14px;
-    list-style: disc;
-    padding-left: 14px;
-    margin-top: 4px;
 }
 
-#suggestions_and_notes_list li:not(:first-child) {
-    margin-top: 4px;
+#suggestions_and_notes_list li {
+    margin-top: 8px;
 }
 
 #instructions p, #instructions li {
@@ -378,6 +423,7 @@ header p {
 #instructions_button_shower {
     text-align: center;
     margin-bottom: 8px;
+    padding-top: 8px;
 }
 
 #instructions {
@@ -410,6 +456,7 @@ header p {
     width: 100%;
     height: 16px;
     border-bottom: 1px solid #C88746;
+    font-family: "Roboto Condensed", sans-serif;
     font-size: 14px;
     display: block;
 }
@@ -447,7 +494,6 @@ header p {
     text-align: center;
     display: block;
     font-family: "Roboto Condensed", sans-serif;
-    margin-bottom: 8px;
 }
 
 .stats_move.best_move {
@@ -476,6 +522,9 @@ header p {
 #range_details {
     display: none;
     position: relative;
+    border: 2px solid #FFF;
+    background-color: #444;
+    padding-top: 2px;
 }
 
 #range_details table {
@@ -499,21 +548,27 @@ header p {
 
 #range_header {
     text-align: right;
-    right: 8px;
+    right: 4px;
     font-size: 12px;
+    top: 6px;
     position: absolute;
 }
+
 .range_row {
     display: flex;
+    height: 12px;
+    font-size: 12px;
 }
 
 #range_details .copypasta {
     text-align: center;
     font-size: 12px;
-    border: 1px solid #FFEEDD;
+    border-top: 1px solid #FFEEDD;
+    border-bottom: 1px solid #FFEEDD;
     background-color: rgba(255, 255, 255, 0.1);
     padding: 4px;
     margin-top: 4px;
     user-select: all;
     font-family: "Roboto Bold", sans-serif;
 }
+

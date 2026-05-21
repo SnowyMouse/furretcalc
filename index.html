@@ -8,23 +8,22 @@
 <title>FurretCalc</title>
 </head>
 <body>
-<header>
-<h1>FurretCalc</h1>
-<p>A WIP damage calculator for the second-generation Pokémon games</p>
-</header>
 
-<!-- Show a banner for the folks who disabled JS on their browser -->
+<!-- Show a banner for the folks who disable JS on their browser -->
 <noscript>
-    <p>This content requires running free JavaScript code in order to function.</p>
+    <p>FurretCalc requires running free JavaScript code in order to function.</p>
     <p>You can also download the <a href="https://github.com/SnowyMouse/furretcalc">source code</a> if you would like to run it locally.</p>
 </noscript>
 
-<div id="generated_time">...</div>
+<div id="loading_box">FurretCalc is Loading...</div>
+
+<div id="calculator_content_outer" style="display: none">
+
 <div id="calculator_content">
 <div id="player_pokemon" class="pokemon_input">
 <div class="pokemon_stats">
 <h2>Your Pokémon's Stats</h2>
-<div class="pokemon_stats_placeholder">Loading...</div>
+<div class="pokemon_stats_placeholder"></div>
 </div>
 
 <div id="badges_box_outer">
@@ -58,29 +57,41 @@
 <div id="opponent_pokemon" class="pokemon_input">
 <div class="pokemon_stats">
 <h2>Your Opponent's Stats</h2>
-<div class="pokemon_stats_placeholder">Loading...</div>
+<div class="pokemon_stats_placeholder"></div>
 </div>
 
 <div id="preset_lookup">
 <h2>NPC Search</h2>
 <div class="preset_lookup_row">
-    <div class="other_stat_inner"><span class="label">Class</span><select id="ai_preset_trainer_class" tabindex="10000"></select></div>
+    <div class="other_stat_inner">
+        <label for="ai_preset_trainer_class">Class</label>
+        <select id="ai_preset_trainer_class" tabindex="10000"></select>
+    </div>
 </div>
 <div class="preset_lookup_row">
-    <div class="other_stat_inner"><span class="label">NPC</span><select id="ai_preset_trainer" tabindex="10000"></select></div>
-    <div class="other_stat_inner"><span class="label">Pokémon</span><select id="ai_preset_monster" tabindex="10000"></select></div>
+    <div class="other_stat_inner">
+        <label for="ai_preset_trainer">NPC</label>
+        <select id="ai_preset_trainer" tabindex="10000"></select>
+    </div>
+    <div class="other_stat_inner">
+        <label for="ai_preset_monster">Pokémon</label>
+        <select id="ai_preset_monster" tabindex="10000"></select>
+    </div>
 </div>
 </div>
 
 <div id="settings">
     <h2>Settings</h2>
     <div class="other_stats">
-        <div class="other_stat_inner"><span class="label">Game</span><select id="game" tabindex="10000"></select></div>
+        <div class="other_stat_inner">
+            <label for="game">Game</label>
+            <select id="game" tabindex="20000"></select>
+        </div>
     </div>
     <div class="other_stats">
         <div class="other_stat_inner">
-            <span class="label">Weather</span>
-            <select id="weather" tabindex="10000">
+            <label for="weather">Weather</label>
+            <select id="weather" tabindex="20000">
                 <option value="Clear" selected>Clear</option>
                 <option value="Sun">Harsh Sunlight</option>
                 <option value="Rain">Rain</option>
@@ -88,76 +99,59 @@
             </select>
         </div>
         <div class="other_stat_inner">
-            <span class="label">Battle Type</span>
-            <select id="battle_type" tabindex="10000">
+            <label for="battle_type">Battle Type</label>
+            <select id="battle_type" tabindex="20000">
                 <option value="ai" selected>Trainer / Wild</option>
                 <option value="pvp" disabled>Link Battle / Battle Tower (TODO)</option>
             </select>
         </div>
     </div>
     <div class="other_stats">
-        <div class="other_stat_inner"><span class="label">Iteration Granularity</span><select id="settings_per_turn" tabindex="20000"><option value="per_turn">Per Turn</option><option value="per_hit">Per Hit</option></select></div>
-        <div class="other_stat_inner"><span class="label">Max Iterations</span><input type="text" id="settings_max_turns" value="200" tabindex="20000" /></div>
-        <div class="other_stat_inner"><span class="label">Max Damage Rolls</span><input type="text" id="settings_max_damage_rolls" value="50000" tabindex="20000" /></div>
-        <div class="other_stat_inner"><span class="label">Target KO Chance (%)</span><input type="text" id="settings_ko_chance" value="90" tabindex="20000" /></div>
+        <div class="other_stat_inner">
+            <label for="settings_max_turns">Max Iterations</label>
+            <input type="text" id="settings_max_turns" value="200" tabindex="20000" class="number_input" />
+        </div>
+        <div class="other_stat_inner">
+            <label for="settings_max_damage_rolls">Max Damage Rolls</label>
+            <input type="text" id="settings_max_damage_rolls" value="50000" tabindex="20000" class="number_input" />
+        </div>
+        <div class="other_stat_inner">
+            <label for="settings_ko_chance">KO Chance (%)</label>
+            <input type="text" id="settings_ko_chance" value="90" tabindex="20000" class="number_input" />
+        </div>
+        <div class="other_stat_inner">
+            <label for="settings_range_display">Range Display</label>
+            <select id="settings_range_display" tabindex="20000">
+                <option value="base_damage">Base Damage</option>
+                <option value="full_range">Full Range</option>
+            </select>
+        </div>
     </div>
     <div class="other_stats">
-        <div class="other_stat_inner"><span class="label">Range Display</span><select id="settings_range_display" tabindex="20000"><option value="base_damage">Base Damage</option><option value="full_range">Full Range</option></select></div>
         <div class="other_stat_inner">
-            <span class="label">Stat Input</span>
-            <select id="stat_input_type" tabindex="10000"></select>
+            <label for="struggle_calcs">Struggle Calcs</label>
+            <input type="checkbox" id="struggle_calcs" tabindex="20000" />
         </div>
+        <div class="other_stat_inner"></div>
+        <div class="other_stat_inner"></div>
         <div class="other_stat_inner">
-            <span class="label">Struggle Calcs</span>
-            <div class="checkbox_filler"><input type="checkbox" id="struggle_calcs" /></div>
+            <label for="stat_input_type">Stat Input</label>
+            <select id="stat_input_type" tabindex="20000"></select>
         </div>
-        <div class="other_stat_inner">(TODO)</div>
     </div>
 </div>
-
-</div>
-
-</div>
-<div id="instructions_button_shower">
-<button id="instructions_show" onclick="show_instructions()">How do I fill this out?</button>
-<div id="instructions">
-    <h2>How do I fill this out?</h2>
-    <p>First, you will want to enter your stats.</p>
-    <ul>
-        <li>
-            <strong>Automatic stat input:</strong> Please enter your IVs (DVs) and stat
-            experience. Your stats will be automatically calculated.
-        </li>
-        <li>
-            <strong>Manual stat input:</strong> Please enter your stats as displayed in
-            the status screen. This is handy for playthroughs where you only know the stats
-            in the stat screen. You can still opt to input IVs (DVs) for calculating
-            Hidden Power.
-        </li>
-    </ul>
-    <p>
-        <strong>TIP:</strong> For <strong>Current HP</strong>, you can input a raw HP
-        amount (e.g. 123), a percentage (e.g. 100% for full HP), or a pixel amount (e.g.
-        48px for full HP). The HP value used will be clamped between 1 and full HP,
-        rounding to the nearest integer.
-    </p>
-    <p>
-        Friendship is only necessary for Return and Frustration. You can leave it at 0,
-        otherwise. Note than NPC trainers will have 70 friendship on unmodified games.
-    </p>
-    <p>
-        Badges are needed to calculate badge boosts. These only apply in normal in-game
-        battles, however.
-    </p>
 </div>
 </div>
 
 <footer>
     <ul>
-        <li>Copyright © 2026 SnowyMouse</li>
+        <li>FurretCalc by SnowyMouse</li>
         <li><a href="https://github.com/SnowyMouse/furretcalc">Source Code (GPL v3)</a></li>
     </ul>
+    <div id="generated_time">...</div>
 </footer>
 <script src="js/webpage.js" type="module"></script>
+</div>
+
 </body>
 </html>

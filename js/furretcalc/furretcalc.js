@@ -364,6 +364,8 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
         accuracy = 1.0
     }
 
+    const recovery_per_turn = defender.data.item === "Leftovers" ? Math.max(int_divide(defender.data.stats.max_hp, 16), 1) : 0
+
     calculate_damage_rolls_against_hp(
         move_data,
         defender.data.stats.hp,
@@ -374,10 +376,12 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
         max_rolls,
         per_hit,
         accuracy,
-        0
+        0,
+        recovery_per_turn
     )
 
     return_value.rolls.accuracy = accuracy
+    return_value.recovery_per_turn = recovery_per_turn
 
     if(!per_hit) {
         adjust_turn_chances_for_move({move_data, return_value, weather})
@@ -391,6 +395,8 @@ function adjust_turn_chances_for_move({move_data, weather, return_value}) {
     if(turns_calculated === 0) {
         return
     }
+
+    // TODO: Figure out how to make leftovers interact with these...
 
     switch(move_data.effect) {
         case "EFFECT_SOLARBEAM":
@@ -683,7 +689,7 @@ function combine_rolls(rolls, defender) {
     return new_rolls
 }
 
-function calculate_damage_rolls_against_hp(move_data, starting_hp, max_hp, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy, starting_successful_moves_in_a_row) {
+function calculate_damage_rolls_against_hp(move_data, starting_hp, max_hp, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy, starting_successful_moves_in_a_row, healing_per_turn) {
     if(starting_hp > max_hp || max_hp <= 0 || starting_hp <= 0) {
         throw new Error(`invalid HP: ${starting_hp} / ${max_hp}`)
     }
@@ -691,14 +697,14 @@ function calculate_damage_rolls_against_hp(move_data, starting_hp, max_hp, retur
     const rolls = return_value.rolls.rolls
 
     if(move_data.effect === "EFFECT_HYPER_BEAM" || move_data.effect === "EFFECT_FURY_CUTTER" || move_data.effect === "EFFECT_ROLLOUT") {
-        calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rolls, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy, starting_successful_moves_in_a_row)
+        calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, max_hp, rolls, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy, starting_successful_moves_in_a_row, healing_per_turn)
         return
     }
 
     // create buckets from 0 to HP-1
     const buckets = []
     for(let i = 0; i <= max_hp; i++) {
-        buckets.push([0.0, 0.0])
+        buckets.push([0.0, 0.0]) // first value is the chance, second value is a temporary value (will be the chance at the end of the loop)
     }
 
     // starting HP should be 100% now...
@@ -747,10 +753,27 @@ function calculate_damage_rolls_against_hp(move_data, starting_hp, max_hp, retur
         if(defeat_chance >= (cutoff ?? 1.0)) {
             break
         }
+
+        if(healing_per_turn > 0) {
+            // don't change anything that was ko'd
+            const ko = buckets[0][0]
+            buckets[0] = [0.0, 0.0]
+
+            for(const [k,v] of Object.entries(buckets.map((v) => v[0]))) {
+                buckets[k][0] -= v
+                buckets[k][1] -= v
+
+                const target_hp = Math.min(parseInt(k) + healing_per_turn, max_hp)
+                buckets[target_hp][0] += v
+                buckets[target_hp][1] += v
+            }
+
+            buckets[0] = [ko, ko]
+        }
     }
 }
 
-function calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rolls, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy, starting_successful_moves_in_a_row) {
+function calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, max_hp, rolls, return_value, cutoff, max_turns, max_rolls, per_hit, accuracy, starting_successful_moves_in_a_row, healing_per_turn) {
     // A slower, recursive approach for move effects difficult to figure out linearly
 
     const must_recharge = !per_hit && move_data.effect === "EFFECT_HYPER_BEAM"
@@ -793,12 +816,12 @@ function calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rol
                 continue
             }
 
-            inner(remaining_hp_after_damage, turn_index + 1, total_probability, successful_moves_in_a_row + 1)
+            inner(Math.min(remaining_hp_after_damage + healing_per_turn, turn_index + 1, max_hp), total_probability, successful_moves_in_a_row + 1)
         }
 
         // But what if we miss?
         if(accuracy < 1.0) {
-            inner(remaining_hp, turn_index + 1, current_universe_chance * (1.0 - accuracy), 0)
+            inner(Math.min(remaining_hp + healing_per_turn, turn_index + 1, max_hp), turn_index + 1, current_universe_chance * (1.0 - accuracy), 0)
         }
     }
 
@@ -823,8 +846,6 @@ function calculate_damage_rolls_against_hp_recursive(move_data, starting_hp, rol
             break
         }
     }
-
-
 }
 
 function calculate_max_damage_for_move_with_stats(generation, move_type, move_data, attacker, defender, stats, is_crit, weather) {
