@@ -20,8 +20,12 @@ body {
     background-image: url('./furret_bg.png');
     background-size: 500px;
     background-attachment: fixed;
-    animation: furret_background_animation 20s linear infinite;
+    background-position: 162px -162px;
     font-family: "Roboto", sans-serif;
+}
+
+body.animated {
+    animation: furret_background_animation 20s linear infinite;
 }
 
 @keyframes furret_background_animation {

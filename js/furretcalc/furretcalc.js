@@ -200,7 +200,7 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
     const moves = get_moves(game)
     const move_data_original = moves[move_type]
 
-    let { per_hit, weather, max_rolls, max_turns, cutoff } = properties
+    let { per_hit, weather, max_rolls, max_turns, cutoff, ignore_accuracy } = properties
     const move_data = { ...move_data_original }
     apply_move_modifications(game, move_data, attacker, defender)
 
@@ -340,6 +340,10 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
     let accuracy = accuracy_over_256 / 256
 
     const bypasses_accuracy = (() => {
+        if(ignore_accuracy) {
+            return true
+        }
+
         if(move_data.effect === "EFFECT_ALWAYS_HIT") {
             return true
         }

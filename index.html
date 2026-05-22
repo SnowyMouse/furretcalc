@@ -4,10 +4,22 @@
 <meta charset="utf-8" />
 <script src="./js/signalr/signalr.min.js"></script>
 <script src="http://localhost:8085/dist/gameHookMapperClient.js"></script>
+<script>
+    function toggle_reduce_animations() {
+        const reduce = document.getElementById("reduce_animations").checked
+        if (reduce) {
+            document.body.className = ""
+        }
+        else {
+            document.body.className = "animated"
+        }
+    }
+    window.addEventListener("load", toggle_reduce_animations)
+</script>
 <link rel="stylesheet" href="style/style.css" />
 <title>FurretCalc</title>
 </head>
-<body>
+<body class="animated">
 
 <!-- Show a banner for the folks who disable JS on their browser -->
 <noscript>
@@ -132,8 +144,14 @@
             <label for="struggle_calcs">Struggle Calcs</label>
             <input type="checkbox" id="struggle_calcs" tabindex="20000" />
         </div>
-        <div class="other_stat_inner"></div>
-        <div class="other_stat_inner"></div>
+        <div class="other_stat_inner">
+            <label for="ignore_accuracy">Ignore Accuracy</label>
+            <input type="checkbox" id="ignore_accuracy" tabindex="20000" />
+        </div>
+        <div class="other_stat_inner">
+            <label for="reduce_animations">Reduce Animations</label>
+            <input type="checkbox" id="reduce_animations" onclick="toggle_reduce_animations()" tabindex="20000" />
+        </div>
         <div class="other_stat_inner">
             <label for="stat_input_type">Stat Input</label>
             <select id="stat_input_type" tabindex="20000"></select>

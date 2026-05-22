@@ -68,6 +68,7 @@ async function actually_recalculate() {
             max_rolls,
             max_turns,
             cutoff: target_ko_chance / 100.0,
+            ignore_accuracy: document.getElementById("ignore_accuracy").checked,
             game
         }
 
@@ -833,6 +834,9 @@ ${select_all_buttons}
     document.getElementById("stat_input_type").addEventListener("input", () => update_stat_input_type())
 
     for(const input of document.querySelectorAll("input")) {
+        if(input.id === "reduce_animations") {
+            continue
+        }
         input.addEventListener("input", recalculate)
     }
 
