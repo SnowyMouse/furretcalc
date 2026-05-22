@@ -68,7 +68,6 @@ async function actually_recalculate() {
             max_rolls,
             max_turns,
             cutoff: target_ko_chance / 100.0,
-            ignore_accuracy: document.getElementById("ignore_accuracy").checked,
             game
         }
 
@@ -417,7 +416,8 @@ function get_stats(is_player) {
         species: null,
         item: null,
         status: null,
-        level: null
+        level: null,
+        ignore_accuracy: false
     }
     if(struggle_calcs) {
         stats.moves.push("STRUGGLE")
@@ -426,23 +426,23 @@ function get_stats(is_player) {
     for(const stat of document.querySelectorAll(`${get_stats_box(is_player)} input, ${get_stats_box(is_player)} select`)) {
         for(const c of stat.classList) {
             switch(c) {
-                case "hp_stat": stats.stats["hp"] = parse_int_clamped(stat.value, 1, 999); break;
-                case "atk_stat": stats.stats["attack"] = parse_int_clamped(stat.value, 1, 999); break;
-                case "def_stat": stats.stats["defense"] = parse_int_clamped(stat.value, 1, 999); break;
-                case "spa_stat": stats.stats["special_attack"] = parse_int_clamped(stat.value, 1, 999); break;
-                case "spd_stat": stats.stats["special_defense"] = parse_int_clamped(stat.value, 1, 999); break;
-                case "spe_stat": stats.stats["speed"] = parse_int_clamped(stat.value, 1, 999); break;
+                case "hp_stat": stats.stats["hp"] = evaluate(0, stat.value, 1, 999); break;
+                case "atk_stat": stats.stats["attack"] = evaluate(0, stat.value, 1, 999); break;
+                case "def_stat": stats.stats["defense"] = evaluate(0, stat.value, 1, 999); break;
+                case "spa_stat": stats.stats["special_attack"] = evaluate(0, stat.value, 1, 999); break;
+                case "spd_stat": stats.stats["special_defense"] = evaluate(0, stat.value, 1, 999); break;
+                case "spe_stat": stats.stats["speed"] = evaluate(0, stat.value, 1, 999); break;
 
-                case "atk_dv": stats.dvs["attack"] = parse_int_clamped(stat.value, 0, 15); break;
-                case "def_dv": stats.dvs["defense"] = parse_int_clamped(stat.value, 0, 15); break;
-                case "spc_dv": stats.dvs["special"] = parse_int_clamped(stat.value, 0, 15); break;
-                case "spe_dv": stats.dvs["speed"] = parse_int_clamped(stat.value, 0, 15); break;
+                case "atk_dv": stats.dvs["attack"] = evaluate(0, stat.value, 0, 15); break;
+                case "def_dv": stats.dvs["defense"] = evaluate(0, stat.value, 0, 15); break;
+                case "spc_dv": stats.dvs["special"] = evaluate(0, stat.value, 0, 15); break;
+                case "spe_dv": stats.dvs["speed"] = evaluate(0, stat.value, 0, 15); break;
 
-                case "hp_statexp": stats.statexp["hp"] = parse_int_clamped(stat.value, 0, 65535); break;
-                case "atk_statexp": stats.statexp["attack"] = parse_int_clamped(stat.value, 0, 65535); break;
-                case "def_statexp": stats.statexp["defense"] = parse_int_clamped(stat.value, 0, 65535); break;
-                case "spc_statexp": stats.statexp["special"] = parse_int_clamped(stat.value, 0, 65535); break;
-                case "spe_statexp": stats.statexp["speed"] = parse_int_clamped(stat.value, 0, 65535); break;
+                case "hp_statexp": stats.statexp["hp"] = evaluate(0, stat.value, 0, 65535); break;
+                case "atk_statexp": stats.statexp["attack"] = evaluate(0, stat.value, 0, 65535); break;
+                case "def_statexp": stats.statexp["defense"] = evaluate(0, stat.value, 0, 65535); break;
+                case "spc_statexp": stats.statexp["special"] = evaluate(0, stat.value, 0, 65535); break;
+                case "spe_statexp": stats.statexp["speed"] = evaluate(0, stat.value, 0, 65535); break;
 
                 case "atk_stage": stats.stages["attack"] = parse_int_clamped(stat.value, -6, 6); break;
                 case "def_stage": stats.stages["defense"] = parse_int_clamped(stat.value, -6, 6); break;
@@ -461,11 +461,12 @@ function get_stats(is_player) {
                 case "species": stats.species = stat.value; break;
                 case "status": stats.status = stat.value; break;
                 case "friendship": stats.friendship = stat.value; break;
-                case "level": stats.level = parse_int_clamped(stat.value, 0, 255); break;
+                case "level": stats.level = evaluate(0, stat.value, 0, 255); break;
                 case "current_hp": current_hp = stat.value; break;
 
                 case "reflect": stats.screens.reflect = stat.checked; break;
                 case "light_screen": stats.screens.light_screen = stat.checked; break;
+                case "ignore_accuracy": stats.ignore_accuracy = stat.checked; break;
 
                 case "type_primary": stats.types[0] = furretcalc.util.Type[stat.value]; break;
                 case "type_secondary": stats.types[1] = furretcalc.util.Type[stat.value]; break;
@@ -696,6 +697,11 @@ function set_up_widgets() {
             <label for="${id_prefix}_light_screen">Light Screen</label>
             <input type="checkbox" id="${id_prefix}_light_screen" tabindex="${misc_tabs}" class="light_screen" />
         </div>
+        <div class="other_stat_inner">
+            <label for="${id_prefix}_ignore_accuracy">Ignore Accuracy</label>
+            <input type="checkbox" id="${id_prefix}_ignore_accuracy" tabindex="${misc_tabs}" class="ignore_accuracy" />
+        </div>
+        <div class="other_stat_inner"></div>
     </div>
         `
 
@@ -1332,14 +1338,16 @@ function reshow_range() {
     }
 
     if(attack_boost) {
-        attack_boost_info.push(`+${attack_name}`)
+        attack_boost_info.push(`+${attack_name}-Badge`)
     }
     if(defense_boost) {
-        defense_boost_info.push(`+${defense_name}`)
+        defense_boost_info.push(`+${defense_name}-Badge`)
     }
 
-    attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.accuracy, "ACC"))
-    defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.evasion, "EVA"))
+    if(!infos.properties.ignore_accuracy) {
+        attack_boost_info.push(stat_stage_to_string(infos.stats.data.stages.accuracy, "ACC"))
+        defense_boost_info.push(stat_stage_to_string(infos.stats_opposite.data.stages.evasion, "EVA"))
+    }
 
     const badge_boost_index = furretcalc.get_type_badge_boost_badges(game)[infos.data.move_data.type]
     if(badge_boost_index != null && infos.stats.badges?.[badge_boost_index]) {
@@ -1406,7 +1414,7 @@ function reshow_range() {
     function format_chance_text(chance_text) {
         const hp_display = (infos.stats_opposite.data.stats.max_hp === infos.stats_opposite.data.stats.hp) ? infos.stats_opposite.data.stats.max_hp : `${infos.stats_opposite.data.stats.hp} / ${infos.stats_opposite.data.stats.max_hp}`
 
-        return `Lvl. ${infos.stats.data.level} • ${attack} ${attack_name} ${attack_boost_text} ${species_from_name} ${move_name} vs. ${hp_display} HP • ${defense} ${defense_name} ${defense_boost_text} ${species_to_name}: ${infos.displayed_range} -- ${chance_text}`
+        return `Lvl. ${infos.stats.data.level} • ${attack} ${attack_name} ${attack_boost_text} ${species_from_name} ${move_name} vs. ${hp_display} HP • ${defense} ${defense_name} ${defense_boost_text} ${species_to_name}: ${infos.displayed_range} -- ${chance_text}${infos.stats.data.ignore_accuracy ? " (ignoring accuracy)" : ""}`
     }
 
     const fifty_fifty = format_chance_text(generate_range_text(0.5))
@@ -1450,13 +1458,13 @@ function get_current_game() {
     return document.getElementById("game").value
 }
 
-function evaluate(starting_value, expression) {
+function evaluate(starting_value, expression, min = 1, max = starting_value) {
     const expression_cleaned = expression.replace(/\s/g,'')
     if(!expression_cleaned) {
         return starting_value
     }
 
-    const values = expression_cleaned.split(/(\-|\+)/g)
+    const values = expression_cleaned.split(/(\-|\+|\*|\/)/g)
     if(values.length === 0) {
         return starting_value
     }
@@ -1497,6 +1505,8 @@ function evaluate(starting_value, expression) {
         switch(current_operator) {
             case "+": current_value += actual_value; break;
             case "-": current_value -= actual_value; break;
+            case "*": current_value *= actual_value; break;
+            case "/": current_value /= actual_value; break;
             case null: current_value = actual_value; break;
             default: console.log(`unknown operator ${current_operator}`)
         }
@@ -1504,7 +1514,7 @@ function evaluate(starting_value, expression) {
         current_operator = null
     } 
 
-    return Math.max(Math.min(Math.round(current_value), starting_value), 1)
+    return Math.max(Math.min(Math.round(current_value), max), min)
 }
 
 const StatInputType = {

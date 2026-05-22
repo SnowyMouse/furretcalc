@@ -200,7 +200,7 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
     const moves = get_moves(game)
     const move_data_original = moves[move_type]
 
-    let { per_hit, weather, max_rolls, max_turns, cutoff, ignore_accuracy } = properties
+    let { per_hit, weather, max_rolls, max_turns, cutoff } = properties
     const move_data = { ...move_data_original }
     apply_move_modifications(game, move_data, attacker, defender)
 
@@ -340,7 +340,7 @@ function calculate_damage_for_move(move_type, attacker, defender, warnings, prop
     let accuracy = accuracy_over_256 / 256
 
     const bypasses_accuracy = (() => {
-        if(ignore_accuracy) {
+        if(attacker.data.ignore_accuracy) {
             return true
         }
 
@@ -932,15 +932,15 @@ function get_attack_and_defense_stat(game, generation, move_data, attacker, defe
             ]
         }
         case Generation.Gen2: {
-            const crit_physical_reuse_stat = attacker.data.stages.attack > attacker.data.stages.defense
-            const crit_special_reuse_stat = attacker.data.stages.special_attack > attacker.data.stages.special_defense
+            const crit_physical_use_boosted_stats = attacker.data.stages.attack > defender.data.stages.defense
+            const crit_special_use_boosted_stats = attacker.data.stages.special_attack > defender.data.stages.special_defense
 
             let stats
             if(is_physical) {
-                stats = { attack: attacker.stats.attack, defense: defender.stats.defense, attack_crit: crit_physical_reuse_stat ? attacker.stats.attack : attacker.data.stats.attack, defense_crit: crit_physical_reuse_stat ? defender.stats.defense : defender.data.stats.defense }
+                stats = { attack: attacker.stats.attack, defense: defender.stats.defense, attack_crit: crit_physical_use_boosted_stats ? attacker.stats.attack : attacker.data.stats.attack, defense_crit: crit_physical_use_boosted_stats ? defender.stats.defense : defender.data.stats.defense }
             }
             else {
-                stats = { attack: attacker.stats.special_attack, defense: defender.stats.special_defense, attack_crit: crit_special_reuse_stat ? attacker.stats.special_attack : attacker.data.stats.special_attack, defense_crit: crit_special_reuse_stat ? defender.stats.special_defense : defender.data.stats.special_defense }
+                stats = { attack: attacker.stats.special_attack, defense: defender.stats.special_defense, attack_crit: crit_special_use_boosted_stats ? attacker.stats.special_attack : attacker.data.stats.special_attack, defense_crit: crit_special_use_boosted_stats ? defender.stats.special_defense : defender.data.stats.special_defense }
             }
 
             if(defender.data.screens[is_physical ? "reflect" : "light_screen"]) {
