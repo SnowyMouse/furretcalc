@@ -571,7 +571,7 @@ function set_up_widgets() {
     <tr>
         <th></th>
         <th>IVs</th>
-        <th class="statexp_column">Stat EXP</th>
+        <th class="statexp_column"><span class="large_label">Stat EXP</span><span class="small_label">S.XP</span></th>
         <th>Stat</th>
         <th>Stage</th>
         <th>Final</th>
@@ -698,7 +698,10 @@ function set_up_widgets() {
             <input type="checkbox" id="${id_prefix}_light_screen" tabindex="${misc_tabs}" class="light_screen" />
         </div>
         <div class="other_stat_inner">
-            <label for="${id_prefix}_ignore_accuracy">Ignore Accuracy</label>
+            <label for="${id_prefix}_ignore_accuracy">
+                <span class="small_label">Ignore ACC</span>
+                <span class="large_label">Ignore Accuracy</span>
+            </label>
             <input type="checkbox" id="${id_prefix}_ignore_accuracy" tabindex="${misc_tabs}" class="ignore_accuracy" />
         </div>
         <div class="other_stat_inner"></div>
@@ -1427,8 +1430,8 @@ function reshow_range() {
     html += `<div class="copypasta">${better}</div>`
 
     html += "<table><tr><th>Damage</th><th>Probability</th></tr>"
-    html += `<tr><td class="special_range_stat">${infos.data.rolls.average.toFixed(1)}</td><td class="special_range_stat">AVERAGE (PER HIT)</td></tr>`
-    html += `<tr><td class="special_range_stat">${infos.data.rolls.average_noncrit.toFixed(1)}</td><td class="special_range_stat">AVERAGE, NON-CRIT (PER HIT)</td></tr>`
+    html += `<tr><td class="special_range_stat">${infos.data.rolls.average.toFixed(1)}</td><td class="special_range_stat">AVG (PER HIT)</td></tr>`
+    html += `<tr><td class="special_range_stat">${infos.data.rolls.average_noncrit.toFixed(1)}</td><td class="special_range_stat">AVG, NON-CRIT (PER HIT)</td></tr>`
     if(infos.data.rolls.accuracy < 1.0) {
         html += `<tr><td>0 (miss)</td><td>${single_decimal(100 - 100 * infos.data.rolls.accuracy)}%</td></tr>`
     }

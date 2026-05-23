@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <script src="./js/signalr/signalr.min.js"></script>
 <script src="http://localhost:8085/dist/gameHookMapperClient.js"></script>
 <script>
@@ -120,19 +121,28 @@
     </div>
     <div class="other_stats">
         <div class="other_stat_inner">
-            <label for="settings_max_turns">Max Iterations</label>
+            <label for="settings_max_turns">Max Turns</label>
             <input type="text" id="settings_max_turns" value="200" tabindex="20000" class="number_input" />
         </div>
         <div class="other_stat_inner">
-            <label for="settings_max_damage_rolls">Max Damage Rolls</label>
+            <label for="settings_max_damage_rolls">
+                <span class="large_label">Max Damage Rolls</span>
+                <span class="small_label">Max Rolls</span>
+            </label>
             <input type="text" id="settings_max_damage_rolls" value="50000" tabindex="20000" class="number_input" />
         </div>
         <div class="other_stat_inner">
-            <label for="settings_ko_chance">KO Chance (%)</label>
+            <label for="settings_ko_chance">
+                <span class="small_label">KO %</span>
+                <span class="large_label">KO Chance (%)</span>
+            </label>
             <input type="text" id="settings_ko_chance" value="90" tabindex="20000" class="number_input" />
         </div>
         <div class="other_stat_inner">
-            <label for="settings_range_display">Range Display</label>
+            <label for="settings_range_display">
+                <span class="small_label">Range</span>
+                <span class="large_label">Range Display</span>
+            </label>
             <select id="settings_range_display" tabindex="20000">
                 <option value="base_damage">Base Damage</option>
                 <option value="full_range">Full Range</option>
@@ -141,11 +151,17 @@
     </div>
     <div class="other_stats">
         <div class="other_stat_inner">
-            <label for="struggle_calcs">Struggle Calcs</label>
+            <label for="struggle_calcs">
+                <span class="small_label">Struggle</span>
+                <span class="large_label">Struggle Calcs</span>
+            </label>
             <input type="checkbox" id="struggle_calcs" tabindex="20000" />
         </div>
         <div class="other_stat_inner">
-            <label for="reduce_animations">Reduce Animations</label>
+            <label for="reduce_animations">
+                <span class="small_label">Hide Anim</span>
+                <span class="large_label">Hide Animations</span>
+            </label>
             <input type="checkbox" id="reduce_animations" onclick="toggle_reduce_animations()" tabindex="20000" />
         </div>
         <div class="other_stat_inner"></div>

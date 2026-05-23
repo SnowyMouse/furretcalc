@@ -82,7 +82,6 @@ a {
 
 .stats_move a:hover {
     color: #FFF;
-    font-weight: bold;
 }
 
 footer {
@@ -351,7 +350,7 @@ header p {
 }
 
 .pokemon_input {
-    width: 444px;
+    width: 28%;
     display: flex;
     flex-direction: column;
     gap: 16px;
@@ -396,7 +395,6 @@ header p {
 
 .damage_outer {
     width: 100%;
-    height: 112px;
     border: 1px solid #C88746;
     margin-top: 8px;
     background-color: #000000;
@@ -457,7 +455,7 @@ header p {
     border-left: 1px solid #C88746;
 }
 
-.stats_move .stats_move_name {
+.stats_move_name {
     text-align: center;
     width: 100%;
     height: 16px;
@@ -467,17 +465,19 @@ header p {
     display: block;
 }
 
-.stats_move .stats_move_data {
+.stats_move_data {
     display: block;
     width: 100%;
     font-size: 11px;
     padding: 4px;
+    height: 100px;
 }
 
-.stats_move .stats_move_data .range_percentage, .stats_move .stats_move_data .range_turns {
+.range_row {
     font-family: "Hack", monospace;
     font-size: 11px;
     text-overflow: clip;
+    display: flex;
 }
 
 .range_clickable {
@@ -488,11 +488,11 @@ header p {
     cursor: crosshair;
 }
 
-.stats_move .stats_move_data .range_percentage {
+.range_percentage {
     text-align: right;
 }
 
-.stats_move .stats_move_data .range_turns {
+.range_turns {
     flex: 1;
 }
 
@@ -560,12 +560,6 @@ header p {
     position: absolute;
 }
 
-.range_row {
-    display: flex;
-    height: 12px;
-    font-size: 12px;
-}
-
 #range_details .copypasta {
     text-align: center;
     font-size: 12px;
@@ -578,3 +572,95 @@ header p {
     font-family: "Roboto Bold", sans-serif;
 }
 
+.large_label {
+    display: none;
+}
+
+@media screen and (min-width: 1509px) {
+    .small_label {
+        display: none;
+    }
+    .large_label {
+        display: inline-block;
+    }
+}
+
+/** 1280px - Small windows */
+@media screen and (max-width: 1508px) {
+    #calculator_content_outer {
+        width: calc(100% - 8px);
+        margin-left: 2px;
+        margin-right: 2px;
+        padding-left: 2px;
+        padding-right: 2px;
+    }
+
+    #badges_box_inner {
+        gap: unset;
+    }
+    .badge_box {
+        flex: 1;
+    }
+    table.stat_input {
+        border-spacing: 1px;
+    }
+    .stats_move_data {
+        padding-left: 2px;
+        padding-right: 2px;
+        height: 104px;
+    }
+    .range_row {
+        margin-top: 2px;
+        font-size: 9px;
+    }
+}
+
+/** 1023px - Small devices **/
+@media screen and (max-width: 1023px) {
+    #calculator_content_outer {
+        width: calc(100% - 16px);
+        margin: 8px;
+    }
+    .pokemon_input {
+        width: 100%;
+    }
+    #calculator_content {
+        flex-direction: column;
+        gap: 8px;
+    }
+    #calc_buffer {
+        order: -1;
+    }
+    .pokemon_input {
+        gap: 8px;
+    }
+    #settings, .pokemon_input {
+        border-top: 2px solid #AC794E;
+        padding-top: 8px;
+    }
+    .stats_move_data {
+        height: 180px;
+    }
+    .range_clickable {
+        margin-bottom: 8px;
+    }
+    .range_row {
+        display: block;
+        height: unset;
+        text-align: center;
+        font-size: 9px;
+        margin-top: 8px;
+    }
+    .range_percentage {
+        text-align: center;
+    }
+}
+
+/** 500px - Extra small devices */
+@media screen and (max-width: 500px) {
+    #calculator_content_outer {
+        width: 100%;
+        margin-left: 0;
+        margin-right: 0;
+    }
+}
