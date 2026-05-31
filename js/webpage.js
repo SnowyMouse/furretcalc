@@ -111,6 +111,24 @@ async function actually_recalculate() {
         format_move_data("#player_damage", player_stats, opponent_stats, player_moves, true, suggestions)
         format_move_data("#enemy_damage", opponent_stats, player_stats, opponent_moves, false, suggestions)
 
+        const player_speed_indicator = document.getElementById("player_pokemon_speed_display")
+        const opponent_speed_indicator = document.getElementById("opponent_pokemon_speed_display")
+
+        console.log(player_stats, opponent_stats)
+
+        if(player_stats.stats.speed > opponent_stats.stats.speed) {
+            player_speed_indicator.innerText = "(outspeeds)"
+            opponent_speed_indicator.innerText = ""
+        }
+        else if(player_stats.stats.speed < opponent_stats.stats.speed) {
+            player_speed_indicator.innerText = ""
+            opponent_speed_indicator.innerText = "(outspeeds)"
+        }
+        else {
+            player_speed_indicator.innerText = "(speed tie)"
+            opponent_speed_indicator.innerText = "(speed tie)"
+        }
+
         const notes = document.getElementById("suggestions_and_notes_list")
         let html = ""
 
