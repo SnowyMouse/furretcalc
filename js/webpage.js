@@ -1293,6 +1293,7 @@ function reshow_range() {
     }
 
     const all_pokemon = furretcalc.get_pokemon(game)
+    const all_items = furretcalc.get_items(game)
 
     const species_from_name = all_pokemon[infos.stats.data.species].name
     const species_to_name = all_pokemon[infos.stats_opposite.data.species].name
@@ -1357,10 +1358,16 @@ function reshow_range() {
         attack_boost_info.push(`+${infos.data.move_data.type}-Badge`)
     }
 
-    const item_data = furretcalc.get_items(game)[infos.stats.data.item]
-    if(item_data != null && furretcalc.get_type_boost_items(game)[item_data.effect] === infos.data.move_data.type) {
+    const attacker_item_data = all_items[infos.stats.data.item]
+    if(attacker_item_data != null && furretcalc.get_type_boost_items(game)[attacker_item_data.effect] === infos.data.move_data.type) {
         attack_boost_info.push(`+${infos.data.move_data.type}-Item`)
     }
+
+    const defender_item_data = all_items[infos.stats_opposite.data.item]
+    if(defender_item_data != null && defender_item_data.effect === "HELD_BERRY") {
+        defense_boost_info.push(`+${defender_item_data.parameter}HP-Berry-Item`)
+    }
+
     if(infos.data.recovery_per_turn > 0) {
         defense_boost_info.push(`+${infos.data.recovery_per_turn} HP/turn`)
     }
